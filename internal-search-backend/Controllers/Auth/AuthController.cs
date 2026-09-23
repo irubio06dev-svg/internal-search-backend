@@ -1,13 +1,13 @@
 ﻿using Azure.Core;
-using internal_search.Domain.DTOs;
-using internal_search_backend.Business.Services;
+using internal_search.Domain.DTOs.Auth;
+using internal_search_backend.Business.Services.Usuario;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace internal_search_backend.Controllers
+namespace internal_search_backend.Controllers.Auth
 {
     [Route("system/auth")]
     [ApiController]

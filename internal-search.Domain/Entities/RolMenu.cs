@@ -6,18 +6,30 @@ using System.Text;
 
 namespace internal_search.Domain.Entities
 {
-    [Table("UsuarioRol", Schema = "RRCC")]
-    public class UsuarioRol
+    [Table("RolMenu", Schema = "RRCC")]
+    public class RolMenu
     {
         [Key]
-        [Column("COD_USUARIO_ROL")]
-        public int CodUsuarioRol { get; set; }
-
-        [Column("COD_USUARIO")]
-        public int CodUsuario { get; set; }
+        [Column("COD_ROL_MENU")]
+        public int CodRolMenu { get; set; }
 
         [Column("COD_ROL")]
         public int CodRol { get; set; }
+
+        [Column("COD_MENU")]
+        public int CodMenu { get; set; }
+
+        [Column("PUEDE_VER")]
+        public int PuedeVer { get; set; } = 1;
+
+        [Column("PUEDE_CREAR")]
+        public int PuedeCrear { get; set; } = 0;
+
+        [Column("PUEDE_EDITAR")]
+        public int PuedeEditar { get; set; } = 0;
+
+        [Column("PUEDE_ELIMINAR")]
+        public int PuedeEliminar { get; set; } = 0;
 
         [Column("ESTADO")]
         public int Estado { get; set; } = 1;
@@ -36,12 +48,13 @@ namespace internal_search.Domain.Entities
         [Column("FECHA_ACTU")]
         public DateTime? FechaActu { get; set; }
 
-        // Navegación hacia Usuario
-        [ForeignKey(nameof(CodUsuario))]
-        public Usuarios Usuario { get; set; } = null!;
-            
-        // Navegación hacia Rol
+
+        // FK -> Rol
         [ForeignKey(nameof(CodRol))]
         public Rol Rol { get; set; } = null!;
+
+        // FK -> Menu
+        [ForeignKey(nameof(CodMenu))]
+        public Menu Menu { get; set; } = null!;
     }
 }

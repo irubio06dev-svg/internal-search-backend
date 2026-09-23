@@ -1,11 +1,13 @@
 ﻿using AutoMapper;
-using internal_search.Domain.DTOs;
-using internal_search.Domain.Interfaces;
+using internal_search.Domain.DTOs.Auth;
+using internal_search.Domain.DTOs.Usuario;
+using internal_search.Domain.Interfaces.Auth;
+using internal_search.Domain.Interfaces.Usuario;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace internal_search_backend.Business.Services
+namespace internal_search_backend.Business.Services.Usuario
 {
     public class UsuarioService : IUsuarioService
     {

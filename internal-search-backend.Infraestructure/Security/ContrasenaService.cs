@@ -1,4 +1,4 @@
-﻿using internal_search.Domain.Interfaces;
+﻿using internal_search.Domain.Interfaces.Auth;
 using System;
 using System.Collections.Generic;
 using System.Text;

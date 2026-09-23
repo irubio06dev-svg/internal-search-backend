@@ -1,6 +1,4 @@
-﻿using internal_search.Domain.Interfaces;
-
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 namespace internal_search_backend.Infrastructure.Security;
@@ -8,6 +6,7 @@ namespace internal_search_backend.Infrastructure.Security;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using internal_search.Domain.Entities;
+using internal_search.Domain.Interfaces.Auth;
 
 public class JwtRepository : IJwtRepository 
 {
@@ -18,7 +17,7 @@ public class JwtRepository : IJwtRepository
         _configuration = configuration;
     }
 
-    public string GenerarToken(Usuario usuario)
+    public string GenerarToken(Usuarios usuario)
     {
         var jwtKey = _configuration["Jwt:Key"]
                      ?? throw new InvalidOperationException(

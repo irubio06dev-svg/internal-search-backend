@@ -1,10 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using internal_search.Domain.Interfaces;
 using internal_search.Domain.Entities;
+using internal_search.Domain.Interfaces.Usuario;
 
-namespace internal_search.Infrastructure.Repositories
+namespace internal_search_backend.Infraestructure.Repositories.Usurio
 {
-    public class UsuarioRepository : Domain.Interfaces.IUsuarioRepository
+    public class UsuarioRepository : IUsuarioRepository
     {
         private readonly AppDbContext _context;
 
@@ -13,7 +13,7 @@ namespace internal_search.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Usuario?> ObtenerPorUsuarioAsync(string usuarioLogin)
+        public async Task<Usuarios?> ObtenerPorUsuarioAsync(string usuarioLogin)
         {
             return await _context.Usuarios
                 .Include(u => u.UsuarioRoles.Where(ur => ur.Estado == 1))
@@ -21,7 +21,7 @@ namespace internal_search.Infrastructure.Repositories
                 .FirstOrDefaultAsync(u => u.UsuarioLogin == usuarioLogin);
         }
 
-        public async Task<Usuario?> ObtenerPorIdAsync(int codUsuario)
+        public async Task<Usuarios?> ObtenerPorIdAsync(int codUsuario)
         {
             return await _context.Usuarios
                 .Include(u => u.UsuarioRoles)

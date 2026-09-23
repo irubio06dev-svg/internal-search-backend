@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace internal_search.Domain.DTOs
+namespace internal_search.Domain.DTOs.Auth
 {   
 
     //esto es para las respuesta del que ira al frontend

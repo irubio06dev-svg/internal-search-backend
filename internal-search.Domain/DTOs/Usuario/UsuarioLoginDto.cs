@@ -1,8 +1,9 @@
-﻿using System;
+﻿using internal_search.Domain.DTOs.Auth;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace internal_search.Domain.DTOs
+namespace internal_search.Domain.DTOs.Usuario
 {
     public class UsuarioLoginDto
     {

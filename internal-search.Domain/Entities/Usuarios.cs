@@ -8,7 +8,7 @@ namespace internal_search.Domain.Entities
 {
 
     [Table("Usuarios", Schema = "RRCC")]
-    public class Usuario
+    public class Usuarios
     {
         [Key]
         [Column("COD_USUARIO")]

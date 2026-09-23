@@ -1,6 +1,13 @@
-using internal_search.Domain.Interfaces;
-using internal_search.Infrastructure.Repositories;
-using internal_search_backend.Business.Services;
+using internal_search.Domain.Interfaces.Auth;
+using internal_search.Domain.Interfaces.Buscador;
+using internal_search.Domain.Interfaces.Menu;
+using internal_search.Domain.Interfaces.Usuario;
+using internal_search_backend.Business.Services.Buscador;
+using internal_search_backend.Business.Services.Menu;
+using internal_search_backend.Business.Services.Usuario;
+using internal_search_backend.Infraestructure.Repositories.Buscador;
+using internal_search_backend.Infraestructure.Repositories.Menu;
+using internal_search_backend.Infraestructure.Repositories.Usurio;
 using internal_search_backend.Infraestructure.Security;
 using internal_search_backend.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -53,6 +60,12 @@ builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IContrasenaRepository, ContrasenaService>();
 builder.Services.AddScoped<IJwtRepository, JwtRepository>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+
+builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<IMenuRepository, MenuRepository>();
+
+builder.Services.AddScoped<IBuscadorRepository, BuscadorRepository>();
+builder.Services.AddScoped<IBuscadorService, BuscadorService>();
 
 // Authorization
 builder.Services.AddAuthorization();
