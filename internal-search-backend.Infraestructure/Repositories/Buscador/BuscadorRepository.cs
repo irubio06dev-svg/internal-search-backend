@@ -35,85 +35,88 @@ namespace internal_search_backend.Infraestructure.Repositories.Buscador
             bool tienePrenombres = !string.IsNullOrWhiteSpace(request.Prenombres);
             bool tieneTelefono = !string.IsNullOrWhiteSpace(request.Telefono);
 
-            // --- Calificaciones: solo si hay algún campo que le aplica ---
-            if (tieneDocumento || tieneApePat || tieneApeMat || tienePrenombres)
+            bool esRuc = tipoDocumento == "RUC";
+
+            // --- Calificaciones ---
+            if (tieneDocumento || tieneApePat || (!esRuc && (tieneApeMat || tienePrenombres)))
             {
-                var qCalificaciones = _context.Calificaciones.AsQueryable();
+                var q = _context.Calificaciones.AsQueryable();
 
                 if (tieneDocumento)
-                    qCalificaciones = qCalificaciones.Where(x => x.Documento.Contains(request.Documento!));
+                    q = q.Where(x => x.Documento != null && x.Documento.Contains(request.Documento!));
+
                 if (tieneApePat)
-                    qCalificaciones = qCalificaciones.Where(x => x.ApePat != null && x.ApePat.Contains(request.ApePat!));
-                if (tieneApeMat)
-                    qCalificaciones = qCalificaciones.Where(x => x.ApeMat != null && x.ApeMat.Contains(request.ApeMat!));
-                if (tienePrenombres)
-                    qCalificaciones = qCalificaciones.Where(x =>
+                    q = q.Where(x => x.ApePat != null && x.ApePat.Contains(request.ApePat!));
+
+                if (!esRuc && tieneApeMat)
+                    q = q.Where(x => x.ApeMat != null && x.ApeMat.Contains(request.ApeMat!));
+
+                if (!esRuc && tienePrenombres)
+                    q = q.Where(x =>
                         (x.PriNombre != null && x.PriNombre.Contains(request.Prenombres!)) ||
                         (x.SegNombre != null && x.SegNombre.Contains(request.Prenombres!)));
 
-                calificaciones = await qCalificaciones.ToListAsync();
+                calificaciones = await q.ToListAsync();
             }
 
-            // --- Deudas: solo si hay Documento o algún campo de nombre ---
-            if (tieneDocumento || tieneApePat || tieneApeMat || tienePrenombres)
+            // --- Deudas (razón social directa) ---
+            if (tieneDocumento || tieneApePat || (!esRuc && (tieneApeMat || tienePrenombres)))
             {
-                var qDeudas = _context.Deudas.AsQueryable();
+                var q = _context.Deudas.AsQueryable();
 
                 if (tieneDocumento)
-                    qDeudas = qDeudas.Where(x => x.Documento.Contains(request.Documento!));
-                if (tieneApePat)
-                    qDeudas = qDeudas.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.ApePat!));
-                if (tieneApeMat)
-                    qDeudas = qDeudas.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.ApeMat!));
-                if (tienePrenombres)
-                    qDeudas = qDeudas.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.Prenombres!));
+                    q = q.Where(x => x.Documento != null && x.Documento.Contains(request.Documento!));
 
-                deudas = await qDeudas.ToListAsync();
+                // Para RUC busca razón social con ApePat; para DNI también sirve como "apellido/nombre libre"
+                if (tieneApePat)
+                    q = q.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.ApePat!));
+
+                if (!esRuc && tieneApeMat)
+                    q = q.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.ApeMat!));
+
+                if (!esRuc && tienePrenombres)
+                    q = q.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.Prenombres!));
+
+                deudas = await q.ToListAsync();
             }
 
-            // --- LineaCreditos: mismo patrón ---
-            if (tieneDocumento || tieneApePat || tieneApeMat || tienePrenombres)
+            // --- LineaCreditos (mismo patrón que Deudas) ---
+            if (tieneDocumento || tieneApePat || (!esRuc && (tieneApeMat || tienePrenombres)))
             {
-                var qLineas = _context.LineaCreditos.AsQueryable();
+                var q = _context.LineaCreditos.AsQueryable();
 
                 if (tieneDocumento)
-                    qLineas = qLineas.Where(x => x.Documento.Contains(request.Documento!));
-                if (tieneApePat)
-                    qLineas = qLineas.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.ApePat!));
-                if (tieneApeMat)
-                    qLineas = qLineas.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.ApeMat!));
-                if (tienePrenombres)
-                    qLineas = qLineas.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.Prenombres!));
+                    q = q.Where(x => x.Documento != null && x.Documento.Contains(request.Documento!));
 
-                lineasCredito = await qLineas.ToListAsync();
+                if (tieneApePat)
+                    q = q.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.ApePat!));
+
+                if (!esRuc && tieneApeMat)
+                    q = q.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.ApeMat!));
+
+                if (!esRuc && tienePrenombres)
+                    q = q.Where(x => x.RazonSocial != null && x.RazonSocial.Contains(request.Prenombres!));
+
+                lineasCredito = await q.ToListAsync();
             }
 
-            // --- Movil: incluye Telefono, además de los demás ---
-            if (tieneDocumento || tieneApePat || tieneApeMat || tienePrenombres || tieneTelefono)
+            // --- Movil: NO aplica para RUC (empresas no tienen línea móvil personal) ---
+            if (!esRuc && (tieneDocumento || tieneApePat || tieneApeMat || tienePrenombres || tieneTelefono))
             {
-                var qMoviles = _context.Movil.AsQueryable();
+                var q = _context.Movil.AsQueryable();
 
                 if (tieneDocumento)
-                    qMoviles = qMoviles.Where(x => x.Documento.Contains(request.Documento!));
+                    q = q.Where(x => x.Documento != null && x.Documento.Contains(request.Documento!));
                 if (tieneApePat)
-                    qMoviles = qMoviles.Where(x => x.ApePat != null && x.ApePat.Contains(request.ApePat!));
+                    q = q.Where(x => x.ApePat != null && x.ApePat.Contains(request.ApePat!));
                 if (tieneApeMat)
-                    qMoviles = qMoviles.Where(x => x.ApeMat != null && x.ApeMat.Contains(request.ApeMat!));
+                    q = q.Where(x => x.ApeMat != null && x.ApeMat.Contains(request.ApeMat!));
                 if (tienePrenombres)
-                    qMoviles = qMoviles.Where(x => x.Prenombres != null && x.Prenombres.Contains(request.Prenombres!));
+                    q = q.Where(x => x.Prenombres != null && x.Prenombres.Contains(request.Prenombres!));
                 if (tieneTelefono)
-                    qMoviles = qMoviles.Where(x => x.Telefono != null && x.Telefono.Contains(request.Telefono!));
+                    q = q.Where(x => x.Telefono != null && x.Telefono.Contains(request.Telefono!));
 
-                moviles = await qMoviles.ToListAsync();
-            }
-
-            // --- Filtro adicional por tipo de documento (exacto), si aplica ---
-            if (tieneDocumento && EsLongitudValidaParaTipo(request.Documento!, tipoDocumento))
-            {
-                calificaciones = calificaciones.Where(x => x.Documento == request.Documento).ToList();
-                deudas = deudas.Where(x => x.Documento == request.Documento).ToList();
-                lineasCredito = lineasCredito.Where(x => x.Documento == request.Documento).ToList();
-                moviles = moviles.Where(x => x.Documento == request.Documento).ToList();
+                moviles = await q.ToListAsync();
             }
 
             return new BuscadorResponse
