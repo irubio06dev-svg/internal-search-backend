@@ -17,6 +17,9 @@ public class AppDbContext : DbContext
     public DbSet<Movil> Movil { get; set; }
     public DbSet<LineaCredito> LineaCreditos { get; set; }
 
+    public DbSet<Sueldo> Sueldos { get; set; }
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -43,6 +46,10 @@ public class AppDbContext : DbContext
             .HasNoKey();
 
         modelBuilder.Entity<Movil>()
+            .HasNoKey();
+
+
+        modelBuilder.Entity<Sueldo>()
             .HasNoKey();
     }
 

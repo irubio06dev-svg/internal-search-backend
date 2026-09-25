@@ -1,95 +1,59 @@
-﻿using internal_search.Domain.DTOs.Buscador;
+﻿using internal_search.Domain.DTOs.buscador.individual;
 using internal_search.Domain.Interfaces.Buscador;
-using System;
-using System.Linq;
+using internal_search_backend.Business.Services.Buscador;
+using InternalSearchBackend.Domain.DTOs;
 
-namespace internal_search_backend.Business.Services.Buscador
+namespace InternalSearchBackend.Business.Services
 {
     public class BuscadorService : IBuscadorService
     {
-        private readonly IBuscadorRepository _buscadorRepository;
+        private readonly IBuscadorRepository _repository;
 
-        public BuscadorService(IBuscadorRepository buscadorRepository)
+        public BuscadorService(IBuscadorRepository repository)
         {
-            _buscadorRepository = buscadorRepository;
+            _repository = repository;
         }
 
-        public async Task<BuscadorResponse> BuscarAsync(BuscadorEntrada request)
+        public async Task<BuscadorHistorialResponse> BuscarAsync(
+            BuscadorHistorialEntrada entrada,
+            CancellationToken ct)
         {
-            if (request == null)
-                throw new ArgumentException("La solicitud de búsqueda es obligatoria.");
+            // La validación de longitud/tipo de documento ya la hizo
+            // BuscadorHistorialEntrada mediante IValidatableObject.
 
-            // Normalizamos espacios en blanco
-            request.Documento = request.Documento?.Trim();
-            request.ApePat = request.ApePat?.Trim();
-            request.ApeMat = request.ApeMat?.Trim();
-            request.Prenombres = request.Prenombres?.Trim();
-            request.Telefono = request.Telefono?.Trim();
+            var documento = entrada.Documento.Trim();
+            var periodo = entrada.Periodo.Trim();
 
-            // ==========================================
-            // AL MENOS UN CRITERIO DE BÚSQUEDA
-            // ==========================================
-            bool tieneAlgunCriterio =
-                !string.IsNullOrWhiteSpace(request.Documento) ||
-                !string.IsNullOrWhiteSpace(request.ApePat) ||
-                !string.IsNullOrWhiteSpace(request.ApeMat) ||
-                !string.IsNullOrWhiteSpace(request.Prenombres) ||
-                !string.IsNullOrWhiteSpace(request.Telefono);
-
-            if (!tieneAlgunCriterio)
+            var respuesta = new BuscadorHistorialResponse
             {
-                throw new ArgumentException(
-                    "Debe ingresar al menos un criterio de búsqueda."
-                );
-            }
+                Documento = documento
+            };
 
-            // ==========================================
-            // VALIDAR TIPO DE DOCUMENTO (solo si viene Documento)
-            // ==========================================
-            if (!string.IsNullOrWhiteSpace(request.Documento))
-            {
-                var tipoDocumento = request.TipoDocumento?.Trim().ToUpper() ?? "";
+            // Ejecutamos las consultas de forma SECUENCIAL
+            // porque utilizan el mismo AppDbContext.
 
-                if (string.IsNullOrWhiteSpace(tipoDocumento))
-                {
-                    throw new ArgumentException(
-                        "Debe seleccionar un tipo de documento cuando busca por documento."
-                    );
-                }
+            var deudas = await _repository
+                .BuscarDeudasAsync(documento, periodo, ct);
 
-                switch (tipoDocumento)
-                {
-                    case "DNI":
-                        if (request.Documento.Length != 8 || !request.Documento.All(char.IsDigit))
-                            throw new ArgumentException("El DNI debe contener exactamente 8 dígitos.");
-                        break;
+            var lineasCredito = await _repository
+                .BuscarLineasCreditoAsync(documento, periodo, ct);
 
-                    case "RUC":
-                        if (request.Documento.Length != 11 || !request.Documento.All(char.IsDigit))
-                            throw new ArgumentException("El RUC debe contener exactamente 11 dígitos.");
-                        break;
+            var calificaciones = await _repository
+                .BuscarCalificacionesAsync(documento, periodo, ct);
 
-                    case "CE":
-                        if (request.Documento.Length < 9 || request.Documento.Length > 12)
-                            throw new ArgumentException("El Carnet de Extranjería debe tener entre 9 y 12 caracteres.");
-                        break;
+            var sueldos = await _repository
+                .BuscarSueldosAsync(documento, ct);
 
-                    case "PASAPORTE":
-                        if (request.Documento.Length < 6 || request.Documento.Length > 12)
-                            throw new ArgumentException("El pasaporte debe tener entre 6 y 12 caracteres.");
-                        break;
+            var moviles = await _repository
+                .BuscarMovilesAsync(documento, ct);
 
-                    default:
-                        throw new ArgumentException("El tipo de documento no es válido.");
-                }
+            respuesta.Deudas = deudas;
+            respuesta.LineasCredito = lineasCredito;
+            respuesta.Calificaciones = calificaciones;
+            respuesta.Sueldos = sueldos;
+            respuesta.Moviles = moviles;
 
-                request.TipoDocumento = tipoDocumento; // normalizado, para que el repositorio lo reciba consistente
-            }
-
-            // ==========================================
-            // EJECUTAR BÚSQUEDA
-            // ==========================================
-            return await _buscadorRepository.BuscarAsync(request);
+            return respuesta;
         }
     }
 }
