@@ -1,9 +1,10 @@
 ﻿using internal_search.Domain.DTOs.buscador.individual;
-using internal_search.Domain.Interfaces.Buscador;
-using internal_search_backend.Business.Services.Buscador;
+using internal_search.Domain.DTOs.buscador.persona;
+using internal_search.Domain.Entities;
+using internal_search.Domain.Interfaces.Buscador.individual;
 using InternalSearchBackend.Domain.DTOs;
 
-namespace InternalSearchBackend.Business.Services
+namespace internal_search_backend.Business.Services.Buscador.individual
 {
     public class BuscadorService : IBuscadorService
     {
@@ -22,7 +23,7 @@ namespace InternalSearchBackend.Business.Services
             // BuscadorHistorialEntrada mediante IValidatableObject.
 
             var documento = entrada.Documento.Trim();
-            var periodo = entrada.Periodo.Trim();
+            //var periodo = entrada.Periodo.Trim();
 
             var respuesta = new BuscadorHistorialResponse
             {
@@ -33,13 +34,13 @@ namespace InternalSearchBackend.Business.Services
             // porque utilizan el mismo AppDbContext.
 
             var deudas = await _repository
-                .BuscarDeudasAsync(documento, periodo, ct);
+                .BuscarDeudasAsync(documento, ct);
 
             var lineasCredito = await _repository
-                .BuscarLineasCreditoAsync(documento, periodo, ct);
+                .BuscarLineasCreditoAsync(documento, ct);
 
             var calificaciones = await _repository
-                .BuscarCalificacionesAsync(documento, periodo, ct);
+                .BuscarCalificacionesAsync(documento, ct);
 
             var sueldos = await _repository
                 .BuscarSueldosAsync(documento, ct);
@@ -54,6 +55,18 @@ namespace InternalSearchBackend.Business.Services
             respuesta.Moviles = moviles;
 
             return respuesta;
+        }
+
+        public async Task<BuscadorTelefonoResponse> BuscarPorTelefonoAsync(string telefono, CancellationToken ct)
+        {
+            var registros = await _repository.BuscarPorTelefonoAsync(telefono, ct);
+
+            return new BuscadorTelefonoResponse
+            {
+                Telefono = telefono,
+                DocumentosAsociados = registros.Select(x => x.Documento).Distinct().Count(),
+                Registros = registros
+            };
         }
     }
 }

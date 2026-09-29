@@ -1,16 +1,21 @@
+using internal_search.Application.Services;
+using internal_search.Business.Interfaces;
 using internal_search.Domain.Interfaces.Auth;
-using internal_search.Domain.Interfaces.Buscador;
+using internal_search.Domain.Interfaces.Buscador.individual;
+using internal_search.Domain.Interfaces.Buscador.masivo;
 using internal_search.Domain.Interfaces.Menu;
 using internal_search.Domain.Interfaces.Usuario;
-using internal_search_backend.Business.Services.Buscador;
+using internal_search.Infraestructure.Repositories;
+using internal_search_backend.Business.Services.Buscador.individual;
+using internal_search_backend.Business.Services.Buscador.masivos;
 using internal_search_backend.Business.Services.Menu;
 using internal_search_backend.Business.Services.Usuario;
+using internal_search_backend.Infraestructure.Repositories.Buscador.individual;
+using internal_search_backend.Infraestructure.Repositories.Buscador.masiva;
 using internal_search_backend.Infraestructure.Repositories.Menu;
 using internal_search_backend.Infraestructure.Repositories.Usurio;
 using internal_search_backend.Infraestructure.Security;
 using internal_search_backend.Infrastructure.Security;
-using InternalSearchBackend.Business.Services;
-using InternalSearchBackend.Infraestructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -67,6 +72,18 @@ builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 
 builder.Services.AddScoped<IBuscadorRepository, BuscadorRepository>();
 builder.Services.AddScoped<IBuscadorService, BuscadorService>();
+
+builder.Services.AddScoped<IBuscadorRepository, BuscadorRepository>();
+
+builder.Services.AddScoped<IBuscadorMasivoRepository, BuscadorMasivoRepository>();
+builder.Services.AddScoped<IBuscadorMasivoService, BuscadorMasivoService>();
+
+builder.Services.AddScoped<
+    IBuscadorMasivoExcelService,
+    BuscadorMasivoExcelService>();
+
+builder.Services.AddScoped<IHistorialRepository, HistorialRepository>();
+builder.Services.AddScoped<IHistorialService, HistorialService>();
 
 // Authorization
 builder.Services.AddAuthorization();

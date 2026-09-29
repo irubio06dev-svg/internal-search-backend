@@ -47,7 +47,7 @@ namespace internal_search.Domain.Entities
         [Column("SEG_NOMBRE")]
         public string? SegNombre { get; set; }
 
-        [Column("FECHA_CARGA")]
-        public DateTime FechaCarga { get; set; }
+        //[Column("FECHA_CARGA")]
+        //public DateTime FechaCarga { get; set; }
     }
 }

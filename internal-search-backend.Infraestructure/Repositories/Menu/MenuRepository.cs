@@ -18,7 +18,7 @@ namespace internal_search_backend.Infraestructure.Repositories.Menu
 
         public async Task<List<MenuDto>> ObtenerMenusPorRolAsync(int codRol)
         {
-            return await _context.RolMenus
+            var planos = await _context.RolMenus
                 .Where(rm =>
                     rm.CodRol == codRol &&
                     rm.PuedeVer == 1 &&
@@ -40,6 +40,25 @@ namespace internal_search_backend.Infraestructure.Repositories.Menu
                     PuedeEliminar = rm.PuedeEliminar
                 })
                 .ToListAsync();
+
+            return ConstruirArbol(planos);
+        }
+
+
+        private static List<MenuDto> ConstruirArbol(List<MenuDto> planos)
+        {
+            var porId = planos.ToDictionary(m => m.CodMenu);
+            var raices = new List<MenuDto>();
+
+            foreach (var menu in planos.OrderBy(m => m.Orden))
+            {
+                if (menu.CodMenuPadre is int padreId && porId.TryGetValue(padreId, out var padre))
+                    padre.Children.Add(menu);
+                else
+                    raices.Add(menu);
+            }
+
+            return raices;
         }
     }
 }

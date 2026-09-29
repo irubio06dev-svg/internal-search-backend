@@ -11,14 +11,14 @@ public class AppDbContext : DbContext
     public DbSet<Menu> Menus { get; set; }
     public DbSet<RolMenu> RolMenus { get; set; }
 
-
     public DbSet<Calificacion> Calificaciones { get; set; }
     public DbSet<Deuda> Deudas { get; set; }
     public DbSet<Movil> Movil { get; set; }
     public DbSet<LineaCredito> LineaCreditos { get; set; }
-
     public DbSet<Sueldo> Sueldos { get; set; }
 
+    // NUEVO
+    public DbSet<HistorialDescarga> HistorialDescargas { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,23 +36,29 @@ public class AppDbContext : DbContext
             .HasForeignKey(ur => ur.CodRol);
 
         // Tablas de consulta sin PK
-        modelBuilder.Entity<Calificacion>()
-            .HasNoKey();
+        modelBuilder.Entity<Calificacion>().HasNoKey();
+        modelBuilder.Entity<Deuda>().HasNoKey();
+        modelBuilder.Entity<LineaCredito>().HasNoKey();
+        modelBuilder.Entity<Movil>().HasNoKey();
+        modelBuilder.Entity<Sueldo>().HasNoKey();
 
-        modelBuilder.Entity<Deuda>()
-            .HasNoKey();
+        // NUEVO: historial de descargas (tabla ya creada en BD)
+        modelBuilder.Entity<HistorialDescarga>(e =>
+        {
+            e.ToTable("HistorialDescarga", "RRCC");
+            e.HasKey(x => x.CodHistorial);
 
-        modelBuilder.Entity<LineaCredito>()
-            .HasNoKey();
-
-        modelBuilder.Entity<Movil>()
-            .HasNoKey();
-
-
-        modelBuilder.Entity<Sueldo>()
-            .HasNoKey();
+            e.Property(x => x.CodHistorial).HasColumnName("COD_HISTORIAL").ValueGeneratedOnAdd();
+            e.Property(x => x.CodUsuario).HasColumnName("COD_USUARIO");
+            e.Property(x => x.NombreArchivo).HasColumnName("NOMBRE_ARCHIVO").HasMaxLength(200);
+            e.Property(x => x.RutaArchivo).HasColumnName("RUTA_ARCHIVO").HasMaxLength(400);
+            e.Property(x => x.Secciones).HasColumnName("SECCIONES").HasMaxLength(200);
+            e.Property(x => x.TotalDnis).HasColumnName("TOTAL_DNIS");
+            e.Property(x => x.TamanoBytes).HasColumnName("TAMANO_BYTES");
+            e.Property(x => x.FechaCreo).HasColumnName("FECHA_CREO")
+                .HasColumnType("datetime2")
+                .HasDefaultValueSql("SYSDATETIME()")
+                .ValueGeneratedOnAdd();
+        });
     }
-
-
-
 }

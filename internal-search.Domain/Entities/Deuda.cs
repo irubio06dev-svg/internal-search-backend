@@ -20,8 +20,8 @@ namespace internal_search.Domain.Entities
         [Column("RAZONSOCIAL")]
         public string? RazonSocial { get; set; }
 
-        [Column("CODIGOEMPRESA")]
-        public string? CodigoEmpresa { get; set; }
+        //[Column("CODIGOEMPRESA")]
+        //public string? CodigoEmpresa { get; set; }
 
         [Column("ENTIDAD")]
         public string? Entidad { get; set; }
@@ -38,7 +38,7 @@ namespace internal_search.Domain.Entities
         [Column("SALDO", TypeName = "decimal(20,2)")]
         public decimal? Saldo { get; set; }
 
-        [Column("FECHA_CARGA")]
-        public DateTime FechaCarga { get; set; }
+        //[Column("FECHA_CARGA")]
+        //public DateTime FechaCarga { get; set; }
     }
 }

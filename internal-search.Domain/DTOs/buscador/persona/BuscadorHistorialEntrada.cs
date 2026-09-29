@@ -13,9 +13,14 @@ namespace internal_search.Domain.DTOs.buscador.individual
         [Required(ErrorMessage = "El tipo de documento es obligatorio.")]
         public string TipoDocumento { get; set; }
 
-        [Required(ErrorMessage = "El período es obligatorio.")]
-        [RegularExpression(@"^\d{6}$", ErrorMessage = "El período debe tener formato YYYYMM (6 dígitos).")]
-        public string Periodo { get; set; }
+        //[Required(ErrorMessage = "El período es obligatorio.")]
+        //[RegularExpression(@"^\d{6}$", ErrorMessage = "El período debe tener formato YYYYMM (6 dígitos).")]
+        //public string Periodo { get; set; }
+
+        //[Required(ErrorMessage = "El teléfono es obligatorio.")]
+        //[RegularExpression(@"^9[0-9]{8}$",
+        //ErrorMessage = "El celular debe tener 9 dígitos y comenzar con 9.")]
+        //public string Telefono { get; set; } = string.Empty;
 
         private static readonly Dictionary<string, int> LongitudesFijasPorTipo = new()
         {

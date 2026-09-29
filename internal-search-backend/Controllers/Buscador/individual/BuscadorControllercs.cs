@@ -1,10 +1,12 @@
 ﻿using internal_search.Domain.DTOs.buscador.individual;
-using internal_search_backend.Business.Services.Buscador;
+using internal_search.Domain.DTOs.buscador.persona;
+using internal_search.Domain.Entities;
+using internal_search_backend.Business.Services.Buscador.individual;
 using InternalSearchBackend.Domain.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace internal_search_backend.Controllers.Buscador
+namespace internal_search_backend.Controllers.Buscador.individual
 {
     [ApiController]
     [Route("api/buscador")]
@@ -30,6 +32,16 @@ namespace internal_search_backend.Controllers.Buscador
         public async Task<IActionResult> Buscar([FromBody] BuscadorHistorialEntrada entrada, CancellationToken ct)
         {
             var resultado = await _buscadorService.BuscarAsync(entrada, ct);
+            return Ok(resultado);
+        }
+
+        [HttpPost("buscar-telefono")]
+        [ProducesResponseType(typeof(BuscadorTelefonoResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> BuscarPorTelefono(
+        [FromBody] BuscadorPorTelfonoEntrada entrada, CancellationToken ct)
+        {
+            var resultado = await _buscadorService.BuscarPorTelefonoAsync(entrada.Telefono, ct);
             return Ok(resultado);
         }
     }
