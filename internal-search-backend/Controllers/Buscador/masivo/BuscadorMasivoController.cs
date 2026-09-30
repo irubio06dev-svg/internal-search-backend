@@ -1,10 +1,11 @@
 ﻿using internal_search.Business.Interfaces;
+using internal_search.Domain.Constants;
 using internal_search_backend.Business.Services.Buscador.individual;
 using internal_search_backend.Business.Services.Buscador.masivos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
-using internal_search.Domain.Constants;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -53,6 +54,7 @@ namespace internal_search_backend.Controllers.Buscador.masivo
         //        return BadRequest(ex.Message);
         //    }
         //}
+
 
         [HttpPost("masivo/exportar")]
         [Consumes("multipart/form-data")]

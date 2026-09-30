@@ -66,7 +66,7 @@ public class HistorialService : IHistorialService
             h.Secciones.Split(',', StringSplitOptions.RemoveEmptyEntries))).ToList();
     }
 
-    public async Task<(byte[] Contenido, string Nombre)?> DescargarAsync(int codHistorial, int codUsuario)
+    public async Task<(byte[] Contenido, string NombreArchivo)?> ObtenerArchivoAsync(int codHistorial, int codUsuario)
     {
         // La lista ya viene filtrada por COD_USUARIO, así que nadie accede a archivos ajenos
         var items = await _repo.ObtenerPorUsuarioAsync(codUsuario);
@@ -75,4 +75,7 @@ public class HistorialService : IHistorialService
         if (item is null || !File.Exists(item.RutaArchivo)) return null;
         return (await File.ReadAllBytesAsync(item.RutaArchivo), item.NombreArchivo);
     }
+
+
+
 }
