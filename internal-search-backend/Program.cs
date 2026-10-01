@@ -1,17 +1,21 @@
-using internal_search.Application.Services;
-using internal_search.Business.Interfaces;
 using internal_search.Domain.Interfaces.Auth;
-using internal_search.Domain.Interfaces.Buscador.individual;
-using internal_search.Domain.Interfaces.Buscador.masivo;
+using internal_search.Domain.Interfaces.Buscador.empresas.individual;
+using internal_search.Domain.Interfaces.Buscador.empresas.masivo;
+using internal_search.Domain.Interfaces.Buscador.personas.individual;
+using internal_search.Domain.Interfaces.Buscador.personas.masivo;
 using internal_search.Domain.Interfaces.Menu;
 using internal_search.Domain.Interfaces.Usuario;
-using internal_search.Infraestructure.Repositories;
-using internal_search_backend.Business.Services.Buscador.individual;
-using internal_search_backend.Business.Services.Buscador.masivos;
+using internal_search_backend.Business.Services.Buscador.empresa.individual;
+using internal_search_backend.Business.Services.Buscador.empresa.masivo;
+using internal_search_backend.Business.Services.Buscador.empresas.masivo;
+using internal_search_backend.Business.Services.Buscador.personas.individual;
+using internal_search_backend.Business.Services.Buscador.personas.masivos;
 using internal_search_backend.Business.Services.Menu;
 using internal_search_backend.Business.Services.Usuario;
-using internal_search_backend.Infraestructure.Repositories.Buscador.individual;
-using internal_search_backend.Infraestructure.Repositories.Buscador.masiva;
+using internal_search_backend.Infraestructure.Repositories.Buscador.empresas.individual;
+using internal_search_backend.Infraestructure.Repositories.Buscador.empresas.masiva;
+using internal_search_backend.Infraestructure.Repositories.Buscador.personas.individual;
+using internal_search_backend.Infraestructure.Repositories.Buscador.personas.masiva;
 using internal_search_backend.Infraestructure.Repositories.Menu;
 using internal_search_backend.Infraestructure.Repositories.Usurio;
 using internal_search_backend.Infraestructure.Security;
@@ -70,20 +74,22 @@ builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 
-builder.Services.AddScoped<IBuscadorRepository, BuscadorRepository>();
-builder.Services.AddScoped<IBuscadorService, BuscadorService>();
-
-builder.Services.AddScoped<IBuscadorRepository, BuscadorRepository>();
+builder.Services.AddScoped<IBuscadorRepository, IndividualRepository>();
 
 builder.Services.AddScoped<IBuscadorMasivoRepository, BuscadorMasivoRepository>();
-builder.Services.AddScoped<IBuscadorMasivoService, BuscadorMasivoService>();
+builder.Services.AddScoped<IMasivoExcelService, BuscadorMasivoService>();
 
-builder.Services.AddScoped<
-    IBuscadorMasivoExcelService,
-    BuscadorMasivoExcelService>();
+builder.Services.AddScoped<IBuscadorMasivoExcelService,BuscadorMasivoExcelService>();
 
 builder.Services.AddScoped<IHistorialRepository, HistorialRepository>();
 builder.Services.AddScoped<IHistorialService, HistorialService>();
+
+// Registro de repositorios y servicios de empresa (individual y masivo)
+builder.Services.AddScoped<IEmpresaIndividualRepository, BuscadorIndividualRepository>();
+builder.Services.AddScoped<internal_search_backend.Business.Services.Buscador.empresa.individual.IIndividualService, internal_search_backend.Business.Services.Buscador.empresa.individual.IndividualService>();
+
+builder.Services.AddScoped<IBuscadorEmpresaMasivoRepository, BuscadorEmpresaMasivoRepository>();
+builder.Services.AddScoped<IBuscadorEmpresaMasivoService, BuscadorEmpresaMasivoService>();
 
 // Authorization
 builder.Services.AddAuthorization();

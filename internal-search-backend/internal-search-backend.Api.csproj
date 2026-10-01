@@ -21,4 +21,8 @@
     <ProjectReference Include="..\internal-search.Domain\internal-search-backend.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Controllers\Buscador\empresa\masivo\" />
+  </ItemGroup>
+
 </Project>
