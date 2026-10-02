@@ -23,15 +23,16 @@ namespace internal_search_backend.Controllers.Home
 
         [Authorize]
         [HttpGet("get-routes")]
-        public async Task<IActionResult> GetRoutes([FromQuery] int cod_role)
+        public async Task<IActionResult> GetRoutes([FromQuery] int? cod_role = null)
         {
-            // Antes se confiaba en el rol que mandaba el cliente: solo se aceptan roles del propio usuario
+            // cod_role se ignora: antes se confiaba en el rol que mandaba el cliente (y el frontend
+            // enviaba el id del usuario). El menú sale de los roles activos del usuario del token.
             var usuario = await _usuarioService.ObtenerUsuarioSesionAsync(User.CodUsuario());
-            if (usuario == null || !usuario.Roles.Any(r => r.CodigoRol == cod_role))
-                return Forbid();
+            if (usuario == null)
+                return Unauthorized();
 
             var menus = await _menuService
-                .ObtenerMenusPorRolAsync(cod_role);
+                .ObtenerMenusPorRolesAsync(usuario.Roles.Select(r => r.CodigoRol));
 
             return Ok(menus);
         }

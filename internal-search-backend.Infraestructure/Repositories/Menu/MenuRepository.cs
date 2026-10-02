@@ -45,6 +45,48 @@ namespace internal_search_backend.Infraestructure.Repositories.Menu
         }
 
 
+        public async Task<List<MenuDto>> ObtenerMenusPorRolesAsync(IEnumerable<int> codRoles)
+        {
+            var roles = codRoles.Distinct().ToList();
+
+            var filas = await _context.RolMenus
+                .Where(rm =>
+                    roles.Contains(rm.CodRol) &&
+                    rm.PuedeVer == 1 &&
+                    rm.Estado == 1 &&
+                    rm.Menu.Estado == 1
+                )
+                .Select(rm => new MenuDto
+                {
+                    CodMenu = rm.Menu.CodMenu,
+                    CodMenuPadre = rm.Menu.CodMenuPadre,
+                    NomMenu = rm.Menu.NomMenu,
+                    Ruta = rm.Menu.Ruta,
+                    Icono = rm.Menu.Icono,
+                    Orden = rm.Menu.Orden,
+                    PuedeVer = rm.PuedeVer,
+                    PuedeCrear = rm.PuedeCrear,
+                    PuedeEditar = rm.PuedeEditar,
+                    PuedeEliminar = rm.PuedeEliminar
+                })
+                .ToListAsync();
+
+            var planos = filas
+                .GroupBy(m => m.CodMenu)
+                .Select(g =>
+                {
+                    var m = g.First();
+                    m.PuedeCrear = g.Max(x => x.PuedeCrear);
+                    m.PuedeEditar = g.Max(x => x.PuedeEditar);
+                    m.PuedeEliminar = g.Max(x => x.PuedeEliminar);
+                    return m;
+                })
+                .OrderBy(m => m.Orden)
+                .ToList();
+
+            return ConstruirArbol(planos);
+        }
+
         private static List<MenuDto> ConstruirArbol(List<MenuDto> planos)
         {
             var porId = planos.ToDictionary(m => m.CodMenu);

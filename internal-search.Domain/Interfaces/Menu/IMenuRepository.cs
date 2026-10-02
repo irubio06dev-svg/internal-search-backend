@@ -8,5 +8,8 @@ namespace internal_search.Domain.Interfaces.Menu
     public interface IMenuRepository
     {
         Task<List<MenuDto>> ObtenerMenusPorRolAsync(int codRol);
+
+        // Une los menús de varios roles; ante un menú repetido gana el permiso más amplio
+        Task<List<MenuDto>> ObtenerMenusPorRolesAsync(IEnumerable<int> codRoles);
     }
 }

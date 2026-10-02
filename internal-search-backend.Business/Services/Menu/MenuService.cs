@@ -19,5 +19,10 @@ namespace internal_search_backend.Business.Services.Menu
         {
             return await _menuRepository.ObtenerMenusPorRolAsync(codRol);
         }
+
+        public async Task<List<MenuDto>> ObtenerMenusPorRolesAsync(IEnumerable<int> codRoles)
+        {
+            return await _menuRepository.ObtenerMenusPorRolesAsync(codRoles);
+        }
     }
 }
