@@ -57,7 +57,9 @@ namespace internal_search_backend.Controllers.Auth
                 var codUsuario = await _recuperacionService.RestablecerAsync(
                     request.Token, request.NuevaClave);
 
-                await _auditoria.RegistrarEventoAsync(codUsuario, string.Empty, Ip,
+                // El auditor debe ver quién fue, no solo un código
+                var usuario = await _usuarioService.ObtenerUsuarioSesionAsync(codUsuario);
+                await _auditoria.RegistrarEventoAsync(codUsuario, usuario?.Usuario ?? string.Empty, Ip,
                     "CLAVE_RESTABLECIDA", "Usuario", codUsuario.ToString());
 
                 return Ok(new { message = "Contraseña actualizada. Ya puedes iniciar sesión." });

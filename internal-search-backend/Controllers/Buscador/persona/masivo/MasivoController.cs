@@ -96,23 +96,23 @@ namespace internal_search_backend.Controllers.Buscador.persona.masivo
 
             try
             {
-                // Cada DNI válido cuesta 1 token; se cuenta antes de consultar
-                using var ms = new MemoryStream();
-                await archivo.CopyToAsync(ms, ct);
+                // DniFileParser cierra el stream que recibe, así que cada lectura usa su propia copia
+                byte[] contenido;
+                using (var ms = new MemoryStream())
+                {
+                    await archivo.CopyToAsync(ms, ct);
+                    contenido = ms.ToArray();
+                }
 
-                ms.Position = 0;
-                var costo = DniFileParser.Parse(ms).validos.Count;
+                // Cada DNI válido cuesta 1 token; se cuenta antes de consultar
+                var costo = DniFileParser.Parse(new MemoryStream(contenido)).validos.Count;
                 if (costo == 0)
                     return BadRequest("El archivo no contiene DNIs válidos.");
 
                 var resultado = await _tokens.EjecutarAsync(
                     this.Contexto(), costo, "BUSQUEDA_MASIVA",
                     $"{costo} DNI(s); secciones: {string.Join(",", seleccionadas)}",
-                    () =>
-                    {
-                        ms.Position = 0;
-                        return _masivoService.BuscarMasivoAsync(ms, seleccionadas, ct);
-                    });
+                    () => _masivoService.BuscarMasivoAsync(new MemoryStream(contenido), seleccionadas, ct));
 
                 var excel = _excelService.GenerarExcel(
                     resultado,

@@ -176,6 +176,12 @@ builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 
 builder.Services.AddScoped<IBuscadorRepository, IndividualRepository>();
 
+// Búsqueda individual por persona (DNI / teléfono). Ya existe otro IIndividualService, el de empresas,
+// registrado más abajo: por eso los nombres van completos. Faltaba este registro y /api/buscador/buscar daba 500.
+builder.Services.AddScoped<
+    internal_search_backend.Business.Services.Buscador.personas.individual.IIndividualService,
+    internal_search_backend.Business.Services.Buscador.personas.individual.IndividualService>();
+
 // RENIEC (proveedor externo, solo consulta individual)
 builder.Services.AddSingleton(
     builder.Configuration.GetSection("Reniec").Get<ReniecOptions>() ?? new ReniecOptions());
@@ -220,8 +226,11 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // Controllers
+// AddControllersAsServices hace que, en Desarrollo, el validador de dependencias revise al arrancar
+// que cada controlador tenga todo registrado (así un servicio faltante falla al iniciar, no en una consulta)
 builder.Services.AddControllers(options =>
-    options.Filters.Add<ManejadorExcepcionesFilter>());
+    options.Filters.Add<ManejadorExcepcionesFilter>())
+    .AddControllersAsServices();
 builder.Services.AddProblemDetails();
 
 // Swagger
