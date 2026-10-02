@@ -117,7 +117,8 @@ namespace internal_search_backend.Business.Services.Usuario
                     $"<p>Ya creamos tu cuenta en {sistema}. Tu usuario es <b>{login}</b>.</p>" +
                     $"<p>Define tu contraseña con el botón de abajo. El enlace es válido por {_options.VigenciaInvitacionHoras} horas y de un solo uso.</p>",
                     "Definir contraseña",
-                    enlace);
+                    enlace,
+                    LogoUrl());
             }
             else
             {
@@ -129,10 +130,22 @@ namespace internal_search_backend.Business.Services.Usuario
                     $"<p>Usa el botón de abajo. El enlace es válido por {_options.VigenciaRecuperacionMinutos} minutos y de un solo uso.</p>" +
                     "<p>Si no fuiste tú, ignora este mensaje: tu contraseña no cambia.</p>",
                     "Restablecer contraseña",
-                    enlace);
+                    enlace,
+                    LogoUrl());
             }
 
             await _email.EnviarAsync(usuario.Correo!, asunto, cuerpo);
+        }
+
+        // Logo completo a color del manual de marca, servido por el frontend (o LogoUrl si se configura)
+        private string? LogoUrl()
+        {
+            if (!string.IsNullOrWhiteSpace(_options.LogoUrl))
+                return _options.LogoUrl;
+
+            return Uri.TryCreate(_options.FrontendResetUrl, UriKind.Absolute, out var uri)
+                ? $"{uri.GetLeftPart(UriPartial.Authority)}/images/image.png"
+                : null;
         }
 
         private static string GenerarToken() =>
