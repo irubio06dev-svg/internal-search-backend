@@ -32,6 +32,9 @@ using internal_search_backend.Infraestructure.Repositories.Auditoria;
 using internal_search_backend.Infraestructure.Repositories.Tokens;
 using internal_search_backend.Security;
 using Microsoft.AspNetCore.Builder;
+using internal_search.Domain.Interfaces.Reniec;
+using internal_search_backend.Business.Services.Reniec;
+using internal_search_backend.Infraestructure.Reniec;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -172,6 +175,12 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 
 builder.Services.AddScoped<IBuscadorRepository, IndividualRepository>();
+
+// RENIEC (proveedor externo, solo consulta individual)
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection("Reniec").Get<ReniecOptions>() ?? new ReniecOptions());
+builder.Services.AddHttpClient<IReniecClient, ReniecClient>(c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddScoped<IReniecService, ReniecService>();
 
 builder.Services.AddScoped<IBuscadorMasivoRepository, BuscadorMasivoRepository>();
 builder.Services.AddScoped<IMasivoExcelService, BuscadorMasivoService>();

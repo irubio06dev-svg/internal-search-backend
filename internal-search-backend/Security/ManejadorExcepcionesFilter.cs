@@ -21,6 +21,17 @@ namespace internal_search_backend.Security
 
                 context.ExceptionHandled = true;
             }
+            else if (context.Exception is ReniecNoDisponibleException)
+            {
+                // La consulta falló dentro de TokenService, que ya devolvió el token al usuario
+                context.Result = new ObjectResult(new
+                {
+                    message = "El servicio de RENIEC no está disponible por ahora. No se descontó ningún token."
+                })
+                { StatusCode = StatusCodes.Status502BadGateway };
+
+                context.ExceptionHandled = true;
+            }
         }
     }
 }
