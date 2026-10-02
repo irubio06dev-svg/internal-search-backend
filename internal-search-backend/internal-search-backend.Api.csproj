@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>internal_search_backend</RootNamespace>
+    <UserSecretsId>232f0667-6f89-406a-8715-18760e5610f2</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

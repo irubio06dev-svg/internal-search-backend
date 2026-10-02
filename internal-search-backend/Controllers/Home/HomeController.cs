@@ -1,4 +1,5 @@
 ﻿using internal_search_backend.Business.Services.Menu;
+using internal_search.Domain.Constants;
 using internal_search_backend.Business.Services.Usuario;
 using internal_search_backend.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -31,8 +32,12 @@ namespace internal_search_backend.Controllers.Home
             if (usuario == null)
                 return Unauthorized();
 
-            var menus = await _menuService
-                .ObtenerMenusPorRolesAsync(usuario.Roles.Select(r => r.CodigoRol));
+            var accesoTotal = usuario.Roles.Any(r =>
+                RolesSistema.ConAccesoTotal.Contains(r.Rol, StringComparer.OrdinalIgnoreCase));
+
+            var menus = accesoTotal
+                ? await _menuService.ObtenerTodosLosMenusAsync()
+                : await _menuService.ObtenerMenusPorRolesAsync(usuario.Roles.Select(r => r.CodigoRol));
 
             return Ok(menus);
         }

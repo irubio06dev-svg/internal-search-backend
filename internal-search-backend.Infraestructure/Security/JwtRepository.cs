@@ -55,6 +55,16 @@ public class JwtRepository : IJwtRepository
             )
         };
 
+        // iat permite invalidar los tokens emitidos antes de un cambio de clave (SesionesRevocadas)
+        claims.Add(new System.Security.Claims.Claim(
+            JwtRegisteredClaimNames.Iat,
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+            ClaimValueTypes.Integer64));
+
+        claims.Add(new System.Security.Claims.Claim(
+            JwtRegisteredClaimNames.Jti,
+            Guid.NewGuid().ToString("N")));
+
         foreach (var ur in usuario.UsuarioRoles.Where(ur => ur.Estado == 1 && ur.Rol != null))
         {
             claims.Add(new System.Security.Claims.Claim(

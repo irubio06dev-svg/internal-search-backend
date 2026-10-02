@@ -20,6 +20,9 @@ namespace internal_search_backend.Business.Services.Menu
             return await _menuRepository.ObtenerMenusPorRolAsync(codRol);
         }
 
+        public Task<List<MenuDto>> ObtenerTodosLosMenusAsync() =>
+            _menuRepository.ObtenerTodosLosMenusAsync();
+
         public async Task<List<MenuDto>> ObtenerMenusPorRolesAsync(IEnumerable<int> codRoles)
         {
             return await _menuRepository.ObtenerMenusPorRolesAsync(codRoles);

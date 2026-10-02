@@ -46,6 +46,15 @@ namespace internal_search_backend.Controllers.Usuarios
                 return NoContent();
             });
 
+        // Invalida de inmediato todas las sesiones abiertas del usuario
+        [HttpPost("{codUsuario:int}/cerrar-sesiones")]
+        public Task<IActionResult> CerrarSesiones(int codUsuario) =>
+            Ejecutar(async () =>
+            {
+                await _usuarioAdminService.CerrarSesionesAsync(codUsuario, this.Contexto());
+                return NoContent();
+            });
+
         [HttpPut("{codUsuario:int}/roles")]
         public Task<IActionResult> CambiarRoles(int codUsuario, CambiarRolesDto request) =>
             Ejecutar(async () =>

@@ -84,14 +84,21 @@ namespace internal_search_backend.Infraestructure.Repositories.Usurio
                     Roles = x.UsuarioRoles
                         .Where(ur => ur.Estado == 1 && ur.Rol.Estado == 1)
                         .Select(ur => ur.Rol.NomRol)
-                        .ToList()
+                        .ToList(),
+                    Revocado = _context.SesionesRevocadas
+                        .Where(s => s.CodUsuario == x.CodUsuario)
+                        .Select(s => (DateTime?)s.FechaRevocacion)
+                        .FirstOrDefault()
                 })
                 .FirstOrDefaultAsync();
 
             return u == null
                 ? null
-                : new ContextoSesionDto { Activo = u.Estado == 1, Roles = u.Roles };
+                : new ContextoSesionDto { Activo = u.Estado == 1, Roles = u.Roles, RevocadoDesdeUtc = u.Revocado };
         }
+
+        public Task RevocarSesionesAsync(int codUsuario) =>
+            SesionSql.RevocarAsync(_context, codUsuario, DateTime.UtcNow);
 
         public async Task<List<RolListadoDto>> ListarRolesActivosAsync()
         {

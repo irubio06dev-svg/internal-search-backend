@@ -67,6 +67,9 @@ namespace internal_search_backend.Infraestructure.Repositories.Usurio
                     .SetProperty(t => t.Usado, true)
                     .SetProperty(t => t.FechaUso, ahoraUtc));
 
+            // Con la clave nueva, las sesiones abiertas con la anterior dejan de valer
+            await SesionSql.RevocarAsync(_context, codUsuario, ahoraUtc);
+
             await tx.CommitAsync();
             return codUsuario;
         }

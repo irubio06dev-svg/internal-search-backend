@@ -11,6 +11,7 @@ namespace internal_search_backend.Business.Services.Usuario
         Task<PaginaDto<UsuarioListadoDto>> ListarAsync(string? texto, int pagina, int tamano);
         Task<List<RolListadoDto>> ListarRolesAsync();
         Task CambiarEstadoAsync(int codUsuario, bool activo, ContextoAccion admin);
+        Task CerrarSesionesAsync(int codUsuario, ContextoAccion admin);
         Task CambiarRolesAsync(int codUsuario, IEnumerable<int> codRoles, ContextoAccion admin);
     }
 }

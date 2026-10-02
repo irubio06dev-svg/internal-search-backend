@@ -41,9 +41,15 @@ using internal_search_backend.Infraestructure.Notificaciones;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var jwtKey = builder.Configuration["Jwt:Key"]
-             ?? throw new InvalidOperationException(
-                 "No se configuró Jwt:Key");
+// Los secretos ya no viven en appsettings.json: user-secrets en desarrollo, variables de entorno en producción
+if (string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("DefaultConnection")))
+    throw new InvalidOperationException(
+        "No se configuró ConnectionStrings:DefaultConnection (user-secrets o variable ConnectionStrings__DefaultConnection). Ver appsettings.example.json.");
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+    throw new InvalidOperationException(
+        "Jwt:Key no configurada o demasiado corta (mínimo 32 caracteres). Ver appsettings.example.json.");
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]
                 ?? throw new InvalidOperationException(
@@ -95,6 +101,20 @@ builder.Services
                 {
                     context.Fail("Usuario inactivo o inexistente.");
                     return;
+                }
+
+                // Sesión revocada (cambio de clave o cierre forzado): vale solo lo emitido después.
+                // Un token sin iat es anterior a este control, así que también se rechaza.
+                if (sesion.RevocadoDesdeUtc is { } revocado)
+                {
+                    var revocadoSeg = new DateTimeOffset(DateTime.SpecifyKind(revocado, DateTimeKind.Utc))
+                        .ToUnixTimeSeconds();
+
+                    if (!long.TryParse(principal!.FindFirstValue("iat"), out var iat) || iat < revocadoSeg)
+                    {
+                        context.Fail("Sesión cerrada.");
+                        return;
+                    }
                 }
 
                 foreach (var claim in identity.Claims

@@ -29,5 +29,8 @@ namespace internal_search.Domain.Interfaces.Usuario
         Task<bool> CambiarEstadoAsync(int codUsuario, bool activo, string usuarioActu);
         Task ReemplazarRolesAsync(int codUsuario, IEnumerable<int> codRoles, string usuarioActu);
         Task<int> ContarAdminsGeneralesActivosAsync(int? excluyendoCodUsuario);
+
+        // Invalida todos los tokens ya emitidos para el usuario
+        Task RevocarSesionesAsync(int codUsuario);
     }
 }

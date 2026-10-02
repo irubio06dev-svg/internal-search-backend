@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<Menu> Menus { get; set; }
     public DbSet<RolMenu> RolMenus { get; set; }
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+    public DbSet<SesionRevocada> SesionesRevocadas { get; set; }
     public DbSet<TokenSaldo> TokenSaldos { get; set; }
     public DbSet<TokenMovimiento> TokenMovimientos { get; set; }
     public DbSet<AuditoriaRegistro> Auditoria { get; set; }

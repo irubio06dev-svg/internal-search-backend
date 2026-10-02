@@ -45,6 +45,29 @@ namespace internal_search_backend.Infraestructure.Repositories.Menu
         }
 
 
+        public async Task<List<MenuDto>> ObtenerTodosLosMenusAsync()
+        {
+            var planos = await _context.Menus
+                .Where(m => m.Estado == 1)
+                .OrderBy(m => m.Orden)
+                .Select(m => new MenuDto
+                {
+                    CodMenu = m.CodMenu,
+                    CodMenuPadre = m.CodMenuPadre,
+                    NomMenu = m.NomMenu,
+                    Ruta = m.Ruta,
+                    Icono = m.Icono,
+                    Orden = m.Orden,
+                    PuedeVer = 1,
+                    PuedeCrear = 1,
+                    PuedeEditar = 1,
+                    PuedeEliminar = 1
+                })
+                .ToListAsync();
+
+            return ConstruirArbol(planos);
+        }
+
         public async Task<List<MenuDto>> ObtenerMenusPorRolesAsync(IEnumerable<int> codRoles)
         {
             var roles = codRoles.Distinct().ToList();

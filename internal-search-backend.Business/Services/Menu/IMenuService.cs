@@ -9,5 +9,6 @@ namespace internal_search_backend.Business.Services.Menu
     {
         Task<List<MenuDto>> ObtenerMenusPorRolAsync(int codRol);
         Task<List<MenuDto>> ObtenerMenusPorRolesAsync(IEnumerable<int> codRoles);
+        Task<List<MenuDto>> ObtenerTodosLosMenusAsync();
     }
 }

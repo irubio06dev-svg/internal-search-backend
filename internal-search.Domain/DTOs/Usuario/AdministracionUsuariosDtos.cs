@@ -30,6 +30,9 @@ namespace internal_search.Domain.DTOs.Usuario
     {
         public bool Activo { get; set; }
         public List<string> Roles { get; set; } = new();
+
+        // Tokens emitidos antes de esta fecha (UTC) ya no son válidos
+        public DateTime? RevocadoDesdeUtc { get; set; }
     }
 
     public class RolListadoDto : RolDto

@@ -128,6 +128,17 @@ namespace internal_search_backend.Business.Services.Usuario
                 "Usuario", codUsuario.ToString());
         }
 
+        // Útil si se sospecha que un token fue robado o el equipo se perdió
+        public async Task CerrarSesionesAsync(int codUsuario, ContextoAccion admin)
+        {
+            _ = await _usuarioRepository.ObtenerContextoSesionAsync(codUsuario)
+                ?? throw new ArgumentException("El usuario no existe.");
+
+            await _usuarioRepository.RevocarSesionesAsync(codUsuario);
+
+            await _auditoria.RegistrarAsync(admin, "USUARIO_SESIONES_CERRADAS", "Usuario", codUsuario.ToString());
+        }
+
         public async Task CambiarRolesAsync(int codUsuario, IEnumerable<int> codRoles, ContextoAccion admin)
         {
             var contexto = await _usuarioRepository.ObtenerContextoSesionAsync(codUsuario)
