@@ -21,6 +21,56 @@ namespace internal_search_backend.Infraestructure.Repositories.Usurio
                 .FirstOrDefaultAsync(u => u.UsuarioLogin == usuarioLogin);
         }
 
+        public async Task<Usuarios?> ObtenerActivoPorLoginOCorreoAsync(string identificador)
+        {
+            var porLogin = await _context.Usuarios
+                .FirstOrDefaultAsync(u => u.UsuarioLogin == identificador && u.Estado == 1);
+
+            if (porLogin != null)
+                return porLogin;
+
+            var porCorreo = await _context.Usuarios
+                .Where(u => u.Correo == identificador && u.Estado == 1)
+                .Take(2)
+                .ToListAsync();
+
+            // Si el correo lo comparten varias cuentas no se puede saber a cuál enviar
+            return porCorreo.Count == 1 ? porCorreo[0] : null;
+        }
+
+        public Task<bool> ExisteLoginAsync(string login) =>
+            _context.Usuarios.AnyAsync(u => u.UsuarioLogin == login);
+
+        public Task<bool> ExisteCorreoAsync(string correo) =>
+            _context.Usuarios.AnyAsync(u => u.Correo == correo);
+
+        public Task<List<int>> ObtenerRolesActivosAsync(IEnumerable<int> codRoles)
+        {
+            var ids = codRoles.Distinct().ToList();
+            return _context.Roles
+                .Where(r => ids.Contains(r.CodRol) && r.Estado == 1)
+                .Select(r => r.CodRol)
+                .ToListAsync();
+        }
+
+        public async Task<int> CrearAsync(Usuarios usuario, IEnumerable<int> codRoles)
+        {
+            foreach (var codRol in codRoles.Distinct())
+            {
+                usuario.UsuarioRoles.Add(new UsuarioRol
+                {
+                    CodRol = codRol,
+                    Estado = 1,
+                    UsuCreo = usuario.UsuCreo,
+                    FechaCreo = usuario.FechaCreo
+                });
+            }
+
+            _context.Usuarios.Add(usuario);
+            await _context.SaveChangesAsync();
+            return usuario.CodUsuario;
+        }
+
         public async Task<Usuarios?> ObtenerPorIdAsync(int codUsuario)
         {
             return await _context.Usuarios

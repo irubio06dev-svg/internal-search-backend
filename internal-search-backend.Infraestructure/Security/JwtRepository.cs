@@ -46,6 +46,14 @@ public class JwtRepository : IJwtRepository
                 usuario.UsuarioLogin
             )
         };
+
+        foreach (var ur in usuario.UsuarioRoles.Where(ur => ur.Estado == 1 && ur.Rol != null))
+        {
+            claims.Add(new System.Security.Claims.Claim(
+                System.Security.Claims.ClaimTypes.Role,
+                ur.Rol.NomRol));
+        }
+
         var securityKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtKey));
 

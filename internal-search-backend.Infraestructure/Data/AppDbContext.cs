@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<Rol> Roles { get; set; }
     public DbSet<Menu> Menus { get; set; }
     public DbSet<RolMenu> RolMenus { get; set; }
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
     public DbSet<Calificacion> Calificaciones { get; set; }
     public DbSet<Deuda> Deudas { get; set; }

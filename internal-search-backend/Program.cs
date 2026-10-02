@@ -24,7 +24,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
+using internal_search.Domain.Configuration;
+using internal_search.Domain.Interfaces.Notificaciones;
+using internal_search_backend.Infraestructure.Notificaciones;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -71,6 +76,28 @@ builder.Services.AddScoped<IContrasenaRepository, ContrasenaService>();
 builder.Services.AddScoped<IJwtRepository, JwtRepository>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
+// Alta de usuarios y recuperación de contraseña
+builder.Services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
+builder.Services.AddScoped<IRecuperacionClaveService, RecuperacionClaveService>();
+builder.Services.AddScoped<IUsuarioAdminService, UsuarioAdminService>();
+
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection("Recuperacion").Get<RecuperacionClaveOptions>()
+    ?? new RecuperacionClaveOptions());
+
+var emailOptions = builder.Configuration.GetSection("Email").Get<EmailOptions>() ?? new EmailOptions();
+if (!string.IsNullOrWhiteSpace(emailOptions.Host))
+{
+    builder.Services.AddSingleton(emailOptions);
+    builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+}
+else
+{
+    var esDesarrollo = builder.Environment.IsDevelopment();
+    builder.Services.AddScoped<IEmailSender>(sp =>
+        new LogEmailSender(sp.GetRequiredService<ILogger<LogEmailSender>>(), esDesarrollo));
+}
+
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 
@@ -92,7 +119,31 @@ builder.Services.AddScoped<IBuscadorEmpresaMasivoRepository, BuscadorEmpresaMasi
 builder.Services.AddScoped<IBuscadorEmpresaMasivoService, BuscadorEmpresaMasivoService>();
 
 // Authorization
-builder.Services.AddAuthorization();
+var rolesAdministrador = builder.Configuration
+    .GetSection("Security:RolesAdministrador").Get<string[]>()
+    ?? new[] { "Administrador" };
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("GestionUsuarios", policy =>
+        policy.RequireAssertion(ctx => ctx.User.Claims.Any(c =>
+            (c.Type == ClaimTypes.Role || c.Type == "role") &&
+            rolesAdministrador.Contains(c.Value, StringComparer.OrdinalIgnoreCase))));
+});
+
+// Límite de intentos por IP en login y recuperación (frena fuerza bruta y abuso del envío de correos)
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
 
 // Controllers
 builder.Services.AddControllers();
@@ -149,6 +200,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("Frontend");
+
+app.UseRateLimiter();
 
 // JWT
 app.UseAuthentication();

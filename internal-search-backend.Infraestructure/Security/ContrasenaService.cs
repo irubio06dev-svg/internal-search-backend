@@ -11,5 +11,10 @@ namespace internal_search_backend.Infraestructure.Security
         {
             return BCrypt.Net.BCrypt.Verify(password, hash);
         }
+
+        public string Hashear(string password)
+        {
+            return BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
+        }
     }
 }

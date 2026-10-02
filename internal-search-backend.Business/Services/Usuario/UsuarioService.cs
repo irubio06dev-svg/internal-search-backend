@@ -27,7 +27,7 @@ namespace internal_search_backend.Business.Services.Usuario
             var usuario = await _usuarioRepository
                 .ObtenerPorUsuarioAsync(request.UsuarioLogin);
 
-            if (usuario == null)
+            if (usuario == null || usuario.Estado != 1)
             {
                 throw new UnauthorizedAccessException(
                     "Usuario o contraseña incorrectos");
