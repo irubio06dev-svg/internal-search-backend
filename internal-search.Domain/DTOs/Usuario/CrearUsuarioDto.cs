@@ -30,6 +30,10 @@ namespace internal_search.Domain.DTOs.Usuario
         [Required, MinLength(1)]
         public List<int> CodRoles { get; set; } = new();
 
+        // Tokens (consultas) con los que arranca la cuenta; no aplica a ADMIN GENERAL, que es ilimitado
+        [Range(0, 1_000_000)]
+        public int TokensIniciales { get; set; }
+
         // Opcional. Si se omite, el usuario recibe un correo para definir su propia clave.
         public string? Clave { get; set; }
     }

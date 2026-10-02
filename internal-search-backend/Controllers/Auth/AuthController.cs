@@ -1,5 +1,5 @@
-﻿using Azure.Core;
 using internal_search.Domain.DTOs.Auth;
+using internal_search_backend.Business.Services.Auditoria;
 using internal_search_backend.Business.Services.Usuario;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,14 +16,19 @@ namespace internal_search_backend.Controllers.Auth
     {
         private readonly IUsuarioService _usuarioService;
         private readonly IRecuperacionClaveService _recuperacionService;
+        private readonly IAuditoriaService _auditoria;
 
         public AuthController(
             IUsuarioService usuarioService,
-            IRecuperacionClaveService recuperacionService)
+            IRecuperacionClaveService recuperacionService,
+            IAuditoriaService auditoria)
         {
             _usuarioService = usuarioService;
             _recuperacionService = recuperacionService;
+            _auditoria = auditoria;
         }
+
+        private string? Ip => HttpContext.Connection.RemoteIpAddress?.ToString();
 
         // Siempre responde igual, exista o no la cuenta, para no revelar usuarios
         [AllowAnonymous]
@@ -31,9 +36,10 @@ namespace internal_search_backend.Controllers.Auth
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword(OlvideClaveDto request)
         {
-            await _recuperacionService.SolicitarRecuperacionAsync(
-                request.Identificador,
-                HttpContext.Connection.RemoteIpAddress?.ToString());
+            await _recuperacionService.SolicitarRecuperacionAsync(request.Identificador, Ip);
+
+            await _auditoria.RegistrarEventoAsync(null, request.Identificador, Ip,
+                "CLAVE_RECUPERACION_SOLICITADA");
 
             return Ok(new
             {
@@ -48,13 +54,19 @@ namespace internal_search_backend.Controllers.Auth
         {
             try
             {
-                await _recuperacionService.RestablecerAsync(
+                var codUsuario = await _recuperacionService.RestablecerAsync(
                     request.Token, request.NuevaClave);
+
+                await _auditoria.RegistrarEventoAsync(codUsuario, string.Empty, Ip,
+                    "CLAVE_RESTABLECIDA", "Usuario", codUsuario.ToString());
 
                 return Ok(new { message = "Contraseña actualizada. Ya puedes iniciar sesión." });
             }
             catch (ArgumentException ex)
             {
+                await _auditoria.RegistrarEventoAsync(null, string.Empty, Ip,
+                    "CLAVE_RESTABLECER_FALLIDO", exito: false);
+
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -69,10 +81,14 @@ namespace internal_search_backend.Controllers.Auth
                 var response = await _usuarioService
                     .IniciarSesionAsync(request);
 
+                await _auditoria.RegistrarEventoAsync(response.Usuario.Id, request.UsuarioLogin, Ip, "LOGIN");
+
                 return Ok(response);
             }
             catch (UnauthorizedAccessException ex)
             {
+                await _auditoria.RegistrarEventoAsync(null, request.UsuarioLogin, Ip, "LOGIN_FALLIDO", exito: false);
+
                 return Unauthorized(new
                 {
                     message = ex.Message

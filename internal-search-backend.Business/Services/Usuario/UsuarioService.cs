@@ -50,7 +50,7 @@ namespace internal_search_backend.Business.Services.Usuario
             {
                 Token = token,
                 TipoToken = "Bearer",
-                Expira = 900,
+                Expira = _jwtRepository.DuracionSegundos,
                 Estado = 1,
                 Usuario = new UsuarioLoginDto
                 {

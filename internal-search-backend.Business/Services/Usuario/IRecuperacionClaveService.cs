@@ -10,7 +10,7 @@ namespace internal_search_backend.Business.Services.Usuario
         // True si el correo de invitación salió
         Task<bool> EnviarInvitacionAsync(Usuarios usuario, string? ip);
 
-        // Lanza ArgumentException si la clave no cumple la política o el enlace no es válido
-        Task RestablecerAsync(string token, string nuevaClave);
+        // Devuelve el código del usuario. Lanza ArgumentException si la clave no cumple la política o el enlace no es válido
+        Task<int> RestablecerAsync(string token, string nuevaClave);
     }
 }

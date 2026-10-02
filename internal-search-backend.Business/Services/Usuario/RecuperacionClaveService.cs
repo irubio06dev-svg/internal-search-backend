@@ -71,19 +71,19 @@ namespace internal_search_backend.Business.Services.Usuario
             }
         }
 
-        public async Task RestablecerAsync(string token, string nuevaClave)
+        public async Task<int> RestablecerAsync(string token, string nuevaClave)
         {
             var error = ValidadorClave.Validar(nuevaClave);
             if (error != null)
                 throw new ArgumentException(error);
 
-            var ok = await _resetRepository.RestablecerAsync(
+            var codUsuario = await _resetRepository.RestablecerAsync(
                 Hash(token.Trim()),
                 _contrasena.Hashear(nuevaClave),
                 DateTime.UtcNow);
 
-            if (!ok)
-                throw new ArgumentException("El enlace no es válido o ya expiró. Solicita uno nuevo.");
+            return codUsuario
+                ?? throw new ArgumentException("El enlace no es válido o ya expiró. Solicita uno nuevo.");
         }
 
         private async Task EmitirAsync(Usuarios usuario, byte tipo, TimeSpan vigencia, string? ip)

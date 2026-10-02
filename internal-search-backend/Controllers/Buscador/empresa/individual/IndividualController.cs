@@ -1,5 +1,7 @@
 ﻿using internal_search.Domain.DTOs.buscador.empresa.individual;
 using internal_search_backend.Business.Services.Buscador.empresa.individual;
+using internal_search_backend.Business.Services.Tokens;
+using internal_search_backend.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,11 +14,15 @@ namespace internal_search_backend.Controllers.Buscador.empresa.individual
     [ApiController]
     public class IndividualController : ControllerBase
     {
-        private readonly IIndividualService _buscadorEmpresaService;
+        private const int CostoConsulta = 1;
 
-        public IndividualController(IIndividualService buscadorEmpresaService)
+        private readonly IIndividualService _buscadorEmpresaService;
+        private readonly ITokenService _tokens;
+
+        public IndividualController(IIndividualService buscadorEmpresaService, ITokenService tokens)
         {
             _buscadorEmpresaService = buscadorEmpresaService;
+            _tokens = tokens;
         }
 
         /// <summary>
@@ -33,7 +39,9 @@ namespace internal_search_backend.Controllers.Buscador.empresa.individual
             try
             {
                 // Llamada al servicio de aplicación
-                var resultado = await _buscadorEmpresaService.BuscarEmpresaPorRucAsync(ruc);
+                var resultado = await _tokens.EjecutarAsync(
+                    this.Contexto(), CostoConsulta, "BUSQUEDA_EMPRESA_RUC", ruc,
+                    () => _buscadorEmpresaService.BuscarEmpresaPorRucAsync(ruc));
 
                 return Ok(resultado);
             }
@@ -42,12 +50,8 @@ namespace internal_search_backend.Controllers.Buscador.empresa.individual
                 // Captura las validaciones de negocio/formato (ej: RUC inválido o longitud incorrecta)
                 return BadRequest(new { mensaje = ex.Message });
             }
-            catch (Exception ex)
-            {
-                // Manejo general de errores no controlados en infraestructura o base de datos
-                // (En producción puedes usar un Middleware de excepciones global para esto)
-                return StatusCode(StatusCodes.Status500InternalServerError, new { mensaje = "Ocurrió un error interno en el servidor.", detalle = ex.Message });
-            }
+            // Cualquier otro error lo resuelve el manejador global: 500 sin detalles internos
+            // (antes se devolvía ex.Message al cliente)
         }
 
 
@@ -63,7 +67,9 @@ namespace internal_search_backend.Controllers.Buscador.empresa.individual
             try
             {
                 // Llamada al método correspondiente del servicio
-                var resultado = await _buscadorEmpresaService.BuscarEmpresaPorRazonSocialAsync(razonSocial);
+                var resultado = await _tokens.EjecutarAsync(
+                    this.Contexto(), CostoConsulta, "BUSQUEDA_EMPRESA_RAZON", razonSocial,
+                    () => _buscadorEmpresaService.BuscarEmpresaPorRazonSocialAsync(razonSocial));
                 return Ok(resultado);
             }
             catch (ArgumentException ex)
@@ -71,10 +77,7 @@ namespace internal_search_backend.Controllers.Buscador.empresa.individual
                 // Atrapa la validación de los menos de 3 caracteres
                 return BadRequest(new { mensaje = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { mensaje = "Ocurrió un error interno en el servidor.", detalle = ex.Message });
-            }
+            // Cualquier otro error lo resuelve el manejador global: 500 sin detalles internos
         }
 
 

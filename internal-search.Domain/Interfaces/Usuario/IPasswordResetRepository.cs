@@ -7,7 +7,8 @@ namespace internal_search.Domain.Interfaces.Usuario
         Task InvalidarPendientesAsync(int codUsuario);
         Task CrearAsync(PasswordResetToken token);
 
-        // Consume el token y cambia la clave de forma atómica. False si el token no es válido, ya se usó o expiró.
-        Task<bool> RestablecerAsync(string tokenHash, string nuevaClaveHash, DateTime ahoraUtc);
+        // Consume el token y cambia la clave de forma atómica.
+        // Devuelve el código del usuario, o null si el token no es válido, ya se usó o expiró.
+        Task<int?> RestablecerAsync(string tokenHash, string nuevaClaveHash, DateTime ahoraUtc);
     }
 }

@@ -24,6 +24,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using internal_search.Domain.Interfaces.Auditoria;
+using internal_search.Domain.Interfaces.Tokens;
+using internal_search_backend.Business.Services.Auditoria;
+using internal_search_backend.Business.Services.Tokens;
+using internal_search_backend.Infraestructure.Repositories.Auditoria;
+using internal_search_backend.Infraestructure.Repositories.Tokens;
+using internal_search_backend.Security;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -64,6 +71,42 @@ builder.Services
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
+
+        // Estado y roles se verifican en base de datos en cada petición: un usuario desactivado
+        // o con el rol retirado pierde acceso al instante, sin esperar a que venza el token.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var principal = context.Principal;
+                var identity = principal?.Identity as ClaimsIdentity;
+
+                if (identity == null ||
+                    !int.TryParse(principal!.FindFirstValue(ClaimTypes.NameIdentifier), out var codUsuario))
+                {
+                    context.Fail("Token sin usuario.");
+                    return;
+                }
+
+                var repo = context.HttpContext.RequestServices.GetRequiredService<IUsuarioRepository>();
+                var sesion = await repo.ObtenerContextoSesionAsync(codUsuario);
+
+                if (sesion is not { Activo: true })
+                {
+                    context.Fail("Usuario inactivo o inexistente.");
+                    return;
+                }
+
+                foreach (var claim in identity.Claims
+                    .Where(c => c.Type == ClaimTypes.Role || c.Type == "role").ToList())
+                {
+                    identity.RemoveClaim(claim);
+                }
+
+                foreach (var rol in sesion.Roles)
+                    identity.AddClaim(new Claim(ClaimTypes.Role, rol));
+            }
+        };
     });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -80,6 +123,12 @@ builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
 builder.Services.AddScoped<IRecuperacionClaveService, RecuperacionClaveService>();
 builder.Services.AddScoped<IUsuarioAdminService, UsuarioAdminService>();
+
+// Tokens de consulta y auditoría
+builder.Services.AddScoped<ITokenRepository, TokenRepository>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuditoriaRepository, AuditoriaRepository>();
+builder.Services.AddScoped<IAuditoriaService, AuditoriaService>();
 
 builder.Services.AddSingleton(
     builder.Configuration.GetSection("Recuperacion").Get<RecuperacionClaveOptions>()
@@ -119,16 +168,11 @@ builder.Services.AddScoped<IBuscadorEmpresaMasivoRepository, BuscadorEmpresaMasi
 builder.Services.AddScoped<IBuscadorEmpresaMasivoService, BuscadorEmpresaMasivoService>();
 
 // Authorization
-var rolesAdministrador = builder.Configuration
-    .GetSection("Security:RolesAdministrador").Get<string[]>()
-    ?? new[] { "Administrador" };
-
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("GestionUsuarios", policy =>
-        policy.RequireAssertion(ctx => ctx.User.Claims.Any(c =>
-            (c.Type == ClaimTypes.Role || c.Type == "role") &&
-            rolesAdministrador.Contains(c.Value, StringComparer.OrdinalIgnoreCase))));
+    // Administración de cuentas, tokens y auditoría
+    options.AddPolicy("AdminGeneral", policy =>
+        policy.RequireAssertion(ctx => ctx.User.EsAdminGeneral()));
 });
 
 // Límite de intentos por IP en login y recuperación (frena fuerza bruta y abuso del envío de correos)
@@ -146,7 +190,9 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+    options.Filters.Add<ManejadorExcepcionesFilter>());
+builder.Services.AddProblemDetails();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -195,6 +241,12 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+else
+{
+    // Errores no controlados: 500 genérico, sin trazas ni mensajes internos
+    app.UseExceptionHandler();
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();

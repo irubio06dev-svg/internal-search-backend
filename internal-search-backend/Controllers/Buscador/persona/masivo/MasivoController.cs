@@ -1,5 +1,8 @@
 ﻿using internal_search.Domain.DTOs.buscador.persona.masivos;
 using internal_search_backend.Business.Services.Buscador.personas.masivos;
+using internal_search_backend.Business.helpers;
+using internal_search_backend.Business.Services.Tokens;
+using internal_search_backend.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -18,11 +21,16 @@ namespace internal_search_backend.Controllers.Buscador.persona.masivo
     {
         private readonly IMasivoExcelService _masivoService;
         private readonly IBuscadorMasivoExcelService _excelService;
+        private readonly ITokenService _tokens;
 
-        public MasivoController(IMasivoExcelService masivoService, IBuscadorMasivoExcelService excelService)
+        public MasivoController(
+            IMasivoExcelService masivoService,
+            IBuscadorMasivoExcelService excelService,
+            ITokenService tokens)
         {
             _masivoService = masivoService;
             _excelService = excelService;
+            _tokens = tokens;
 
         }
 
@@ -88,12 +96,23 @@ namespace internal_search_backend.Controllers.Buscador.persona.masivo
 
             try
             {
-                using var stream = archivo.OpenReadStream();
+                // Cada DNI válido cuesta 1 token; se cuenta antes de consultar
+                using var ms = new MemoryStream();
+                await archivo.CopyToAsync(ms, ct);
 
-                var resultado = await _masivoService.BuscarMasivoAsync(
-                    stream,
-                    seleccionadas,   // nuevo
-                    ct);
+                ms.Position = 0;
+                var costo = DniFileParser.Parse(ms).validos.Count;
+                if (costo == 0)
+                    return BadRequest("El archivo no contiene DNIs válidos.");
+
+                var resultado = await _tokens.EjecutarAsync(
+                    this.Contexto(), costo, "BUSQUEDA_MASIVA",
+                    $"{costo} DNI(s); secciones: {string.Join(",", seleccionadas)}",
+                    () =>
+                    {
+                        ms.Position = 0;
+                        return _masivoService.BuscarMasivoAsync(ms, seleccionadas, ct);
+                    });
 
                 var excel = _excelService.GenerarExcel(
                     resultado,

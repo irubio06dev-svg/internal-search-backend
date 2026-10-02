@@ -1,8 +1,13 @@
+using internal_search.Domain.Constants;
+using internal_search.Domain.DTOs.Auditoria;
+using internal_search.Domain.DTOs.Common;
 using internal_search.Domain.DTOs.Usuario;
 using internal_search.Domain.Entities;
 using internal_search.Domain.Interfaces.Auth;
+using internal_search.Domain.Interfaces.Tokens;
 using internal_search.Domain.Interfaces.Usuario;
 using internal_search_backend.Business.helpers;
+using internal_search_backend.Business.Services.Auditoria;
 using System.Security.Cryptography;
 
 namespace internal_search_backend.Business.Services.Usuario
@@ -12,18 +17,24 @@ namespace internal_search_backend.Business.Services.Usuario
         private readonly IUsuarioRepository _usuarioRepository;
         private readonly IContrasenaRepository _contrasena;
         private readonly IRecuperacionClaveService _recuperacion;
+        private readonly ITokenRepository _tokens;
+        private readonly IAuditoriaService _auditoria;
 
         public UsuarioAdminService(
             IUsuarioRepository usuarioRepository,
             IContrasenaRepository contrasena,
-            IRecuperacionClaveService recuperacion)
+            IRecuperacionClaveService recuperacion,
+            ITokenRepository tokens,
+            IAuditoriaService auditoria)
         {
             _usuarioRepository = usuarioRepository;
             _contrasena = contrasena;
             _recuperacion = recuperacion;
+            _tokens = tokens;
+            _auditoria = auditoria;
         }
 
-        public async Task<CrearUsuarioResponseDto> CrearAsync(CrearUsuarioDto dto, string creadoPor, string? ip)
+        public async Task<CrearUsuarioResponseDto> CrearAsync(CrearUsuarioDto dto, ContextoAccion admin)
         {
             var login = dto.UsuarioLogin.Trim();
             var correo = dto.Correo.Trim();
@@ -63,14 +74,26 @@ namespace internal_search_backend.Business.Services.Usuario
                 Dni = dto.Dni?.Trim(),
                 Telefono = dto.Telefono?.Trim(),
                 Estado = 1,
-                UsuCreo = creadoPor.Length > 20 ? creadoPor[..20] : creadoPor,
+                UsuCreo = Corto(admin.Login),
                 FechaCreo = DateTime.Now
             };
 
             var codUsuario = await _usuarioRepository.CrearAsync(usuario, rolesValidos);
 
+            var codAdminGeneral = await _usuarioRepository.ObtenerCodRolAsync(RolesSistema.AdminGeneral);
+            var esAdminGeneral = codAdminGeneral != null && rolesValidos.Contains(codAdminGeneral.Value);
+
+            if (dto.TokensIniciales > 0 && !esAdminGeneral)
+            {
+                await _tokens.AjustarAsync(codUsuario, dto.TokensIniciales, TokenMovimiento.TipoAsignacion,
+                    "ALTA_USUARIO", "Tokens iniciales", admin.CodUsuario);
+            }
+
+            await _auditoria.RegistrarAsync(admin, "USUARIO_CREADO", "Usuario", codUsuario.ToString(),
+                $"{login}; roles [{string.Join(",", rolesValidos)}]; tokens iniciales {(esAdminGeneral ? "ilimitados" : dto.TokensIniciales.ToString())}");
+
             var invitacionEnviada = !conClaveInicial &&
-                await _recuperacion.EnviarInvitacionAsync(usuario, ip);
+                await _recuperacion.EnviarInvitacionAsync(usuario, admin.Ip);
 
             return new CrearUsuarioResponseDto
             {
@@ -79,5 +102,64 @@ namespace internal_search_backend.Business.Services.Usuario
                 InvitacionEnviada = invitacionEnviada
             };
         }
+
+        public Task<PaginaDto<UsuarioListadoDto>> ListarAsync(string? texto, int pagina, int tamano) =>
+            _usuarioRepository.ListarAsync(texto, pagina, tamano);
+
+        public Task<List<RolListadoDto>> ListarRolesAsync() =>
+            _usuarioRepository.ListarRolesActivosAsync();
+
+        public async Task CambiarEstadoAsync(int codUsuario, bool activo, ContextoAccion admin)
+        {
+            var contexto = await _usuarioRepository.ObtenerContextoSesionAsync(codUsuario)
+                ?? throw new ArgumentException("El usuario no existe.");
+
+            if (!activo)
+            {
+                if (codUsuario == admin.CodUsuario)
+                    throw new InvalidOperationException("No puedes desactivar tu propia cuenta.");
+
+                await ValidarQueQuedeAdminAsync(codUsuario, contexto);
+            }
+
+            await _usuarioRepository.CambiarEstadoAsync(codUsuario, activo, Corto(admin.Login));
+
+            await _auditoria.RegistrarAsync(admin, activo ? "USUARIO_ACTIVADO" : "USUARIO_DESACTIVADO",
+                "Usuario", codUsuario.ToString());
+        }
+
+        public async Task CambiarRolesAsync(int codUsuario, IEnumerable<int> codRoles, ContextoAccion admin)
+        {
+            var contexto = await _usuarioRepository.ObtenerContextoSesionAsync(codUsuario)
+                ?? throw new ArgumentException("El usuario no existe.");
+
+            var nuevos = codRoles.Distinct().ToList();
+            var validos = await _usuarioRepository.ObtenerRolesActivosAsync(nuevos);
+            if (nuevos.Count == 0 || validos.Count != nuevos.Count)
+                throw new ArgumentException("Alguno de los roles no existe o está inactivo.");
+
+            var codAdminGeneral = await _usuarioRepository.ObtenerCodRolAsync(RolesSistema.AdminGeneral);
+            var seguiraSiendoAdmin = codAdminGeneral != null && nuevos.Contains(codAdminGeneral.Value);
+
+            if (!seguiraSiendoAdmin)
+                await ValidarQueQuedeAdminAsync(codUsuario, contexto);
+
+            await _usuarioRepository.ReemplazarRolesAsync(codUsuario, nuevos, Corto(admin.Login));
+
+            await _auditoria.RegistrarAsync(admin, "USUARIO_ROLES", "Usuario", codUsuario.ToString(),
+                $"Roles ahora: [{string.Join(",", nuevos)}]");
+        }
+
+        // Evita quedarse sin ningún ADMIN GENERAL activo (nadie podría administrar tokens ni cuentas)
+        private async Task ValidarQueQuedeAdminAsync(int codUsuario, ContextoSesionDto contexto)
+        {
+            var eraAdmin = contexto.Activo &&
+                contexto.Roles.Contains(RolesSistema.AdminGeneral, StringComparer.OrdinalIgnoreCase);
+
+            if (eraAdmin && await _usuarioRepository.ContarAdminsGeneralesActivosAsync(codUsuario) == 0)
+                throw new InvalidOperationException("Debe quedar al menos un ADMIN GENERAL activo.");
+        }
+
+        private static string Corto(string valor) => valor.Length > 20 ? valor[..20] : valor;
     }
 }

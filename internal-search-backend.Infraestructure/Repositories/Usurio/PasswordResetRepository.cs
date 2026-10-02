@@ -28,7 +28,7 @@ namespace internal_search_backend.Infraestructure.Repositories.Usurio
             await _context.SaveChangesAsync();
         }
 
-        public async Task<bool> RestablecerAsync(string tokenHash, string nuevaClaveHash, DateTime ahoraUtc)
+        public async Task<int?> RestablecerAsync(string tokenHash, string nuevaClaveHash, DateTime ahoraUtc)
         {
             await using var tx = await _context.Database.BeginTransactionAsync();
 
@@ -40,7 +40,7 @@ namespace internal_search_backend.Infraestructure.Repositories.Usurio
                     .SetProperty(t => t.FechaUso, ahoraUtc));
 
             if (consumidos == 0)
-                return false;
+                return null;
 
             var codUsuario = await _context.PasswordResetTokens
                 .Where(t => t.TokenHash == tokenHash)
@@ -57,7 +57,7 @@ namespace internal_search_backend.Infraestructure.Repositories.Usurio
             if (actualizados == 0)
             {
                 await tx.RollbackAsync();
-                return false;
+                return null;
             }
 
             // Cualquier otro enlace pendiente del usuario queda sin efecto
@@ -68,7 +68,7 @@ namespace internal_search_backend.Infraestructure.Repositories.Usurio
                     .SetProperty(t => t.FechaUso, ahoraUtc));
 
             await tx.CommitAsync();
-            return true;
+            return codUsuario;
         }
     }
 }

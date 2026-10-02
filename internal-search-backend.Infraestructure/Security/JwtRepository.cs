@@ -17,6 +17,15 @@ public class JwtRepository : IJwtRepository
         _configuration = configuration;
     }
 
+    // Antes se leía "ExpirationMinutes" mientras el appsettings definía "ExpiresInMinutes":
+    // se aceptan ambas y por defecto son 15 minutos.
+    private int DuracionMinutos => int.Parse(
+        _configuration["Jwt:ExpiresInMinutes"]
+        ?? _configuration["Jwt:ExpirationMinutes"]
+        ?? "15");
+
+    public int DuracionSegundos => DuracionMinutos * 60;
+
     public string GenerarToken(Usuarios usuario)
     {
         var jwtKey = _configuration["Jwt:Key"]
@@ -31,8 +40,7 @@ public class JwtRepository : IJwtRepository
                           ?? throw new InvalidOperationException(
                               "No se configuró Jwt:Audience");
 
-        var expirationMinutes = int.Parse(
-            _configuration["Jwt:ExpirationMinutes"] ?? "15");
+        var expirationMinutes = DuracionMinutos;
 
         var claims = new List<Claim>
         {

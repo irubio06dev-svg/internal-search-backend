@@ -9,5 +9,8 @@ namespace internal_search.Domain.Interfaces.Auth
     {
         string GenerarToken(Usuarios usuario);
 
+        // Vigencia con la que se emiten los tokens (Jwt:ExpiresInMinutes)
+        int DuracionSegundos { get; }
+
     }
 }

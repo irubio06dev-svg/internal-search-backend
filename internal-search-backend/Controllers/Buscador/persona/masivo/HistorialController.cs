@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using internal_search_backend.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -29,9 +30,15 @@ namespace internal_search_backend.Controllers.Buscador.persona.masivo
 
         // GET api/historial/5/descargar -> archivo del historial (solo si es de ese COD_USUARIO)
 
+        // Antes cualquier usuario autenticado podía leer el historial de otro
         [HttpGet("usuario/{codUsuario:int}")]
-        public async Task<IActionResult> HistorialPorUsuario(int codUsuario) =>
-            Ok(await _historialService.ListarAsync(codUsuario));
+        public async Task<IActionResult> HistorialPorUsuario(int codUsuario)
+        {
+            if (codUsuario != CodUsuario && !User.EsAdminGeneral())
+                return Forbid();
+
+            return Ok(await _historialService.ListarAsync(codUsuario));
+        }
 
         // GET api/historial/15/descargar
 
