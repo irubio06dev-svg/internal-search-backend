@@ -31,6 +31,7 @@ using internal_search_backend.Business.Services.Tokens;
 using internal_search_backend.Infraestructure.Repositories.Auditoria;
 using internal_search_backend.Infraestructure.Repositories.Tokens;
 using internal_search_backend.Security;
+using Microsoft.AspNetCore.Builder;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -241,12 +242,18 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 
+// Orígenes del frontend: Cors:Origins en appsettings o variables Cors__Origins__0, Cors__Origins__1...
+var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
+    is { Length: > 0 } configurados
+        ? configurados
+        : new[] { "http://localhost:4200", "https://localhost:4200" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:4200", "https://localhost:4200")
+            .WithOrigins(corsOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -268,6 +275,13 @@ else
     app.UseExceptionHandler();
     app.UseHsts();
 }
+
+// Detrás de IIS/nginx/proxy en la misma máquina: usa la IP real del cliente (límite de intentos y auditoría)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+});
 
 app.UseHttpsRedirection();
 
