@@ -60,6 +60,15 @@ Sin dominio propio se puede desplegar igual: la PC (tiene Tailscale) publica la 
 - Solo la URL de producción es pública; la URL única que Vercel da a cada despliegue pide iniciar sesión en Vercel.
 - La contraseña de `admin.general` está en `.credenciales-admin.txt` (solo en esta PC, ignorado por git).
 
+**Cada persona usa el sistema desplegado; nadie necesita su propia copia de la API.** La auditoría del 5-oct mostró a
+compañeros corriendo una copia local de la API contra la base real (se nota por IPs de redes Docker `172.x` en
+`RRCC.Auditoria`): sus consultas a RENIEC fallaban el 100 % porque el token del proveedor **no está en el repositorio**
+(es un secreto que solo vive en el `.env` del servidor). Además esas copias necesitan la clave de la base de datos.
+Quien necesite consultar solo debe entrar a `https://internal-search-frontend.vercel.app` con su cuenta. Si alguien
+desarrolla en local y de verdad necesita RENIEC, el token se le entrega por un canal seguro y va en su `.env`
+(`Reniec__Token`), nunca en el repositorio. Desde esta versión, una copia sin token responde
+"La consulta RENIEC no está configurada" y la auditoría guarda el motivo.
+
 **Archivos del historial de descargas.** Los Excel que genera la carga masiva se guardan en `/data/historial`, dentro del
 volumen de Docker `historial`: sobreviven a `docker compose up -d --build`, pero `docker compose down -v` los borra.
 La API corre sin privilegios y por eso no escribe en `/app` (esa carpeta fue la causa de un error 500 en

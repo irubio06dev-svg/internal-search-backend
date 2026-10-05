@@ -64,7 +64,13 @@ namespace internal_search_backend.Business.Services.Tokens
                         accion, $"Devolución: {detalle}", ctx.CodUsuario);
                 }
 
-                await _auditoria.RegistrarAsync(ctx, accion, detalle: $"{detalle} - falló: {ex.GetType().Name}", exito: false);
+                // Solo los errores propios del dominio llevan su mensaje a la auditoría (son seguros y explican
+                // la causa); de los demás, p. ej. de base de datos, solo el tipo para no registrar detalles internos.
+                var motivo = ex is ReniecNoDisponibleException or ArgumentException
+                    ? $"{ex.GetType().Name}: {ex.Message}"
+                    : ex.GetType().Name;
+
+                await _auditoria.RegistrarAsync(ctx, accion, detalle: $"{detalle} - falló: {motivo}", exito: false);
                 throw;
             }
         }
