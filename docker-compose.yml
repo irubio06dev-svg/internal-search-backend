@@ -15,7 +15,8 @@ services:
       # por eso es seguro confiar en las cabeceras X-Forwarded-* que él agrega.
       Proxy__ConfiarEnCabeceras: "true"
     ports:
-      - "127.0.0.1:8080:8080"
+      # Puerto del lado de la máquina (API_PUERTO en .env, por defecto 8080). Solo en localhost.
+      - "127.0.0.1:${API_PUERTO:-8080}:8080"
 
   tunel:
     image: cloudflare/cloudflared:latest

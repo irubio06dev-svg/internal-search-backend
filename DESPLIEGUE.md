@@ -16,6 +16,44 @@ publicarse por HTTPS mediante un túnel. **El puerto 1433 de SQL Server no se ab
 
 ---
 
+## Mientras se compra el dominio: la API desde la PC de la oficina con Tailscale Funnel
+
+Sin dominio propio se puede desplegar igual: la PC (tiene Tailscale) publica la API con una URL HTTPS **estable**
+(no cambia al reiniciar), y el front va en Vercel con su dirección gratuita `*.vercel.app`.
+
+1. **API en Docker** (ya probado: modo producción, llega a la base real, Swagger apagado, solo escucha en localhost):
+   en `.env` poner `API_PUERTO=8090` (el 8080 de esa PC está ocupado por otros programas) y
+   ```bash
+   docker compose up -d --build
+   ```
+2. **Publicarla con Funnel.** El Funnel de esta PC ya usa el puerto 443 para otro servicio (`127.0.0.1:8077`), así que
+   se usa el **8443** (Funnel solo admite 443, 8443 y 10000):
+   ```bash
+   tailscale funnel --bg --https=8443 http://127.0.0.1:8090
+   tailscale funnel status
+   ```
+   La API queda en `https://desktop-rqr1dib.tail4a0d10.ts.net:8443`.
+   ⚠️ No usar `tailscale funnel reset` para quitarlo: borra **toda** la configuración, incluido el servicio del 443.
+3. **Front en Vercel con la CLI.** El repositorio del front pertenece a otra cuenta de GitHub, y la CLI evita depender
+   de la integración con Git. Desde la carpeta del front:
+   ```bash
+   npx vercel login
+   npx vercel link
+   npx vercel env add API_URL production     # valor: https://desktop-rqr1dib.tail4a0d10.ts.net:8443
+   npx vercel deploy --prod
+   ```
+4. **Cerrar el círculo.** Con la URL `*.vercel.app` que entregue Vercel, editar `.env` de la API
+   (`Cors__Origins__0` y `Recuperacion__FrontendResetUrl`) y aplicar con `docker compose up -d`.
+
+Limitaciones de esta etapa:
+- La PC debe estar **encendida, en la red de la oficina**, con Docker y Tailscale funcionando.
+- En modo producción los correos (invitaciones y recuperación de contraseña) **solo salen si se configura `Email__*`**;
+  sin SMTP no hay forma de entregar los enlaces. Mientras tanto, las cuentas se crean con contraseña inicial.
+- Funnel no garantiza ancho de banda; sirve para esta etapa, no para producción definitiva.
+- Antes de publicar, cambiar la contraseña de `admin.general`: la temporal circuló por chat.
+
+Cuando llegue el dominio se pasa al túnel con nombre (sección 2) y se actualiza `API_URL` en Vercel.
+
 ## 0. Antes de empezar (una sola vez)
 
 1. **Cambiar la contraseña de la base de datos.** La anterior estuvo en el historial de git y hay que darla por
