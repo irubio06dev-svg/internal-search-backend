@@ -60,6 +60,13 @@ Sin dominio propio se puede desplegar igual: la PC (tiene Tailscale) publica la 
 - Solo la URL de producción es pública; la URL única que Vercel da a cada despliegue pide iniciar sesión en Vercel.
 - La contraseña de `admin.general` está en `.credenciales-admin.txt` (solo en esta PC, ignorado por git).
 
+**Archivos del historial de descargas.** Los Excel que genera la carga masiva se guardan en `/data/historial`, dentro del
+volumen de Docker `historial`: sobreviven a `docker compose up -d --build`, pero `docker compose down -v` los borra.
+La API corre sin privilegios y por eso no escribe en `/app` (esa carpeta fue la causa de un error 500 en
+`/api/historial/...` el 5-oct). Los registros de historial creados antes desde un equipo de desarrollo apuntan a rutas
+de Windows que el contenedor no tiene; al descargarlos responde "el archivo ya no está disponible", no error.
+El contenedor trabaja en hora de Lima (`TZ=America/Lima`).
+
 Limitaciones de esta etapa:
 - La PC debe estar **encendida, en la red de la oficina**, con Docker y Tailscale funcionando.
 - En modo producción los correos (invitaciones y recuperación de contraseña) **solo salen si se configura `Email__*`**;

@@ -14,12 +14,15 @@ public class HistorialService : IHistorialService
         _repo = repo;
         _carpeta = config["Historial:Carpeta"]
                    ?? Path.Combine(AppContext.BaseDirectory, "historial");
-        Directory.CreateDirectory(_carpeta);
+        // La carpeta se crea solo al guardar un archivo (GuardarAsync). Antes se creaba aquí, en cada petición,
+        // y si no era escribible hasta el simple listado del historial respondía 500.
     }
 
     public async Task GuardarAsync(int codUsuario, byte[] contenido, string nombreArchivo,
                                    IEnumerable<string> secciones, int totalDnis)
     {
+        Directory.CreateDirectory(_carpeta);
+
         // Nombre físico único; el nombre "bonito" queda en BD
         var ruta = Path.Combine(_carpeta, $"{codUsuario}_{Guid.NewGuid():N}.xlsx");
         await File.WriteAllBytesAsync(ruta, contenido);

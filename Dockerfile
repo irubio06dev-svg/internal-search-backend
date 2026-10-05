@@ -19,9 +19,15 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
 
+# Archivos del historial de descargas. La API corre sin privilegios y no puede escribir en /app, así que
+# usan /data/historial, que pertenece a ese usuario. docker-compose.yml monta ahí un volumen para que
+# los archivos no se pierdan al recrear el contenedor.
+RUN mkdir -p /data/historial && chown -R $APP_UID /data
+
 # Detrás de un túnel o proxy HTTPS; el contenedor solo habla HTTP internamente
 ENV ASPNETCORE_URLS=http://+:8080 \
-    ASPNETCORE_ENVIRONMENT=Production
+    ASPNETCORE_ENVIRONMENT=Production \
+    Historial__Carpeta=/data/historial
 EXPOSE 8080
 
 # Corre sin privilegios
