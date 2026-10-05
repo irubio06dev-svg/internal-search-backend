@@ -198,10 +198,23 @@ builder.Services.AddScoped<IHistorialService, HistorialService>();
 
 // Registro de repositorios y servicios de empresa (individual y masivo)
 builder.Services.AddScoped<IEmpresaIndividualRepository, BuscadorIndividualRepository>();
-builder.Services.AddScoped<internal_search_backend.Business.Services.Buscador.empresa.individual.IIndividualService, internal_search_backend.Business.Services.Buscador.empresa.individual.IndividualService>();
+
+
+// Para el módulo de Empresa:
+builder.Services.AddScoped<
+    internal_search_backend.Business.Services.Buscador.empresa.individual.IIndividualService,
+    internal_search_backend.Business.Services.Buscador.empresa.individual.IndividualService>();
+
+// Para el módulo de Personas:
+builder.Services.AddScoped<
+    internal_search_backend.Business.Services.Buscador.personas.individual.IIndividualService,
+    internal_search_backend.Business.Services.Buscador.personas.individual.IndividualService>();
+
 
 builder.Services.AddScoped<IBuscadorEmpresaMasivoRepository, BuscadorEmpresaMasivoRepository>();
 builder.Services.AddScoped<IBuscadorEmpresaMasivoService, BuscadorEmpresaMasivoService>();
+
+builder.Services.AddScoped<IBuscadorEmpresaMasivoExcelService, BuscadorEmpresaMasivoExcelService>();
 
 // Authorization
 builder.Services.AddAuthorization(options =>
