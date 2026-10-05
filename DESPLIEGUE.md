@@ -54,8 +54,16 @@ Sin dominio propio se puede desplegar igual: la PC (tiene Tailscale) publica la 
 | API (pública, vía Funnel) | `https://desktop-rqr1dib.tail4a0d10.ts.net:8443` → contenedor en `127.0.0.1:8090` de esta PC |
 | Base de datos | La real de la oficina (`192.168.1.17`), solo accesible desde la red interna |
 
-- **Actualizar el front:** desde la carpeta del front, `npx vercel deploy --prod`. No hay despliegue automático al
-  hacer push, porque el repositorio está en otra cuenta de GitHub y no se conectó a Vercel.
+- **Actualizar el front:** el proyecto de Vercel **no está conectado a GitHub** (la conexión nativa exige ser
+  administrador del repositorio, que es de otra cuenta), así que un `git push` por sí solo no publica nada.
+  Dos vías:
+  1. *Automática:* el repositorio del front trae `.github/workflows/desplegar-vercel.yml`, que despliega con cada push a
+     `main` sin importar quién lo haga. Se activa cuando alguien con permiso de **administrador** del repositorio crea
+     tres secretos en *Settings → Secrets and variables → Actions*: `VERCEL_TOKEN` (token creado en Vercel →
+     Account Settings → Tokens, con alcance al equipo `informa-peru`), `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID`
+     (los ids del equipo y del proyecto; están en `.vercel/project.json` de la copia local del front).
+     Mientras falten, el flujo avisa y se omite sin dar error.
+  2. *Manual:* `git pull` y, desde la carpeta del front, `npx vercel deploy --prod`.
 - **Actualizar la API:** `git pull` y `docker compose up -d --build` en esta PC.
 - Solo la URL de producción es pública; la URL única que Vercel da a cada despliegue pide iniciar sesión en Vercel.
 - La contraseña de `admin.general` está en `.credenciales-admin.txt` (solo en esta PC, ignorado por git).
