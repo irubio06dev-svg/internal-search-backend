@@ -33,7 +33,8 @@ Sin dominio propio se puede desplegar igual: la PC (tiene Tailscale) publica la 
    tailscale funnel status
    ```
    La API queda en `https://desktop-rqr1dib.tail4a0d10.ts.net:8443`.
-   ⚠️ No usar `tailscale funnel reset` para quitarlo: borra **toda** la configuración, incluido el servicio del 443.
+   Para dejar de publicarla: `tailscale funnel --https=8443 off`.
+   ⚠️ No usar `tailscale funnel reset`: borra **toda** la configuración, incluido el servicio del 443.
 3. **Front en Vercel con la CLI.** El repositorio del front pertenece a otra cuenta de GitHub, y la CLI evita depender
    de la integración con Git. Desde la carpeta del front:
    ```bash
@@ -44,6 +45,20 @@ Sin dominio propio se puede desplegar igual: la PC (tiene Tailscale) publica la 
    ```
 4. **Cerrar el círculo.** Con la URL `*.vercel.app` que entregue Vercel, editar `.env` de la API
    (`Cors__Origins__0` y `Recuperacion__FrontendResetUrl`) y aplicar con `docker compose up -d`.
+
+**Estado actual (5-oct-2026):**
+
+| Pieza | Dónde |
+|---|---|
+| Front (producción, pública) | `https://internal-search-frontend.vercel.app` — proyecto `informa-peru/internal-search-frontend` |
+| API (pública, vía Funnel) | `https://desktop-rqr1dib.tail4a0d10.ts.net:8443` → contenedor en `127.0.0.1:8090` de esta PC |
+| Base de datos | La real de la oficina (`192.168.1.17`), solo accesible desde la red interna |
+
+- **Actualizar el front:** desde la carpeta del front, `npx vercel deploy --prod`. No hay despliegue automático al
+  hacer push, porque el repositorio está en otra cuenta de GitHub y no se conectó a Vercel.
+- **Actualizar la API:** `git pull` y `docker compose up -d --build` en esta PC.
+- Solo la URL de producción es pública; la URL única que Vercel da a cada despliegue pide iniciar sesión en Vercel.
+- La contraseña de `admin.general` está en `.credenciales-admin.txt` (solo en esta PC, ignorado por git).
 
 Limitaciones de esta etapa:
 - La PC debe estar **encendida, en la red de la oficina**, con Docker y Tailscale funcionando.

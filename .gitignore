@@ -17,3 +17,6 @@ packages/
 *.nupkg
 # Despliegue: configuración con secretos reales
 .env
+
+# Credenciales locales de esta PC (nunca se versionan)
+.credenciales-admin.txt
