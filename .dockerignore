@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+.vs/
+.git/
+.gitignore
+# Datos y archivos de trabajo que no deben entrar en la imagen
+reportes/
+database/
+**/appsettings.Development.json
+**/*.user

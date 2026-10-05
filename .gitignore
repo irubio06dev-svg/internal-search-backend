@@ -15,3 +15,5 @@ obj/
 # NuGet
 packages/
 *.nupkg
+# Despliegue: configuración con secretos reales
+.env

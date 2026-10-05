@@ -295,11 +295,26 @@ else
 }
 
 // Detrás de IIS/nginx/proxy en la misma máquina: usa la IP real del cliente (límite de intentos y auditoría)
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+var cabecerasReenviadas = new ForwardedHeadersOptions
 {
     ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
                      | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
-});
+};
+
+// Si la API corre en un contenedor o detrás de un túnel (Cloudflare Tunnel, etc.) el proxy NO es "localhost":
+// sin esto todos los usuarios compartirían la IP del proxy y el límite de 10 intentos/minuto los bloquearía a
+// todos a la vez. Activar SOLO si el puerto de la API no es accesible directamente desde internet
+// (Proxy:ConfiarEnCabeceras=true, o la variable Proxy__ConfiarEnCabeceras).
+if (app.Configuration.GetValue<bool>("Proxy:ConfiarEnCabeceras"))
+{
+#pragma warning disable ASPDEPR005 // KnownNetworks: se vacía para aceptar el proxy de la plataforma
+    cabecerasReenviadas.KnownNetworks.Clear();
+#pragma warning restore ASPDEPR005
+    cabecerasReenviadas.KnownProxies.Clear();
+    cabecerasReenviadas.ForwardLimit = 1;
+}
+
+app.UseForwardedHeaders(cabecerasReenviadas);
 
 app.UseHttpsRedirection();
 
