@@ -41,13 +41,20 @@
 [CmdletBinding()]
 param(
     [string]$Carpeta = 'C:\Buscador',
-    [string]$ArchivoEnv = (Join-Path $PSScriptRoot '.env'),
+    [string]$ArchivoEnv,
     [int]$Puerto = 8090,
     [string]$Nombre = 'BuscadorApi',
     [switch]$Desinstalar
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Carpeta de este script. $PSScriptRoot llega vacío si el script se lanza sin -File (basta un error de tecleo
+# en el comando), así que hay respaldos: la ruta del propio script y, al final, la carpeta actual.
+$aqui = $PSScriptRoot
+if (-not $aqui -and $MyInvocation.MyCommand.Path) { $aqui = Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $aqui) { $aqui = (Get-Location).Path }
+if (-not $ArchivoEnv) { $ArchivoEnv = Join-Path $aqui '.env' }
 
 # Variables del .env que solo usa Docker Compose: la API no las necesita
 $soloDocker = @('API_PUERTO', 'TUNNEL_TOKEN')
@@ -142,8 +149,9 @@ if ($Desinstalar) {
 
 # --- Comprobaciones previas: nada se toca hasta que todo esté en orden ---------------------------------------------
 Paso 'Comprobando'
+Ok "Instalador en: $aqui"
 
-$paquete = Join-Path $PSScriptRoot 'api'
+$paquete = Join-Path $aqui 'api'
 if (-not (Test-Path -LiteralPath (Join-Path $paquete 'internal-search-backend.Api.exe'))) {
     throw "No encuentro '$paquete\internal-search-backend.Api.exe'. Descomprime el paquete completo y ejecuta el script desde esa carpeta."
 }

@@ -128,7 +128,8 @@ del equipo).
    contraseña (no lo subas a ningún sitio ni lo mandes por correo).
 2. **Copiar el `.zip` al servidor** (Escritorio remoto o carpeta compartida) y descomprimirlo. Dejar el `.env`
    (el mismo que usa Docker; plantilla en `.env.example`) junto a `instalar-servicio.ps1`.
-3. **En el servidor**, PowerShell **como administrador** dentro de esa carpeta:
+3. **En el servidor**, doble clic en `instalar.bat` (pide permisos de administrador y deja la ventana abierta al
+   final). Es lo mismo que abrir PowerShell **como administrador** dentro de esa carpeta y ejecutar:
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\instalar-servicio.ps1
    ```

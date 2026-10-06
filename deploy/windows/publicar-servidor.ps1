@@ -22,7 +22,11 @@ param([switch]$IncluirEnv)
 
 $ErrorActionPreference = 'Stop'
 
-$raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+$aqui = $PSScriptRoot
+if (-not $aqui -and $MyInvocation.MyCommand.Path) { $aqui = Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $aqui) { $aqui = (Get-Location).Path }
+
+$raiz = (Resolve-Path -LiteralPath (Join-Path $aqui '..\..')).Path
 $carpeta = Join-Path $raiz 'artifacts\buscador-servidor'
 $zip = Join-Path $raiz 'artifacts\buscador-servidor.zip'
 
@@ -38,7 +42,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet publish.' }
 Remove-Item -LiteralPath (Join-Path $carpeta 'api\appsettings.Development.json') -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $carpeta 'api\appsettings.example.json') -ErrorAction SilentlyContinue
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'instalar-servicio.ps1') -Destination $carpeta
+Copy-Item -LiteralPath (Join-Path $aqui 'instalar-servicio.ps1') -Destination $carpeta
+Copy-Item -LiteralPath (Join-Path $aqui 'instalar.bat') -Destination $carpeta
 Copy-Item -LiteralPath (Join-Path $raiz '.env.example') -Destination $carpeta
 
 if ($IncluirEnv) {
@@ -53,7 +58,8 @@ BUSCADOR - API COMO SERVICIO DE WINDOWS
 
 1. Copia esta carpeta al servidor (por ejemplo a C:\Instalar\buscador).
 2. Si no vino incluido, copia ahí también el archivo .env (el mismo que usa Docker; plantilla: .env.example).
-3. Abre PowerShell COMO ADMINISTRADOR en esa carpeta y ejecuta:
+3. Haz doble clic en instalar.bat (pide permisos de administrador y deja la ventana abierta al final).
+   Es lo mismo que abrir PowerShell COMO ADMINISTRADOR en esa carpeta y ejecutar:
 
        powershell -ExecutionPolicy Bypass -File .\instalar-servicio.ps1
 
