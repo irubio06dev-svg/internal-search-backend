@@ -10,8 +10,8 @@ Navegador ──HTTPS──▶ Vercel (front Angular, sitio estático)
                                                                        └──▶ SQL Server 192.168.1.17:1433 (red interna)
 ```
 
-La API corre en una máquina **siempre encendida** de la oficina. Hoy es una laptop con Docker (provisional); lo
-definitivo es un servicio de Windows en un servidor: ver
+La API corre en una máquina **siempre encendida** de la oficina. Desde el 6-oct-2026 es un servicio de Windows en un
+servidor (antes, una laptop con Docker): ver
 [Que la API no dependa de una laptop](#que-la-api-no-dependa-de-una-laptop-servicio-de-windows-en-el-servidor-de-la-oficina).
 
 **Por qué así:** Vercel solo sirve el front. No ejecuta .NET y, además, `192.168.1.17` es una IP privada que no
@@ -21,6 +21,9 @@ publicarse por HTTPS mediante un túnel. **El puerto 1433 de SQL Server no se ab
 ---
 
 ## Mientras se compra el dominio: la API desde la PC de la oficina con Tailscale Funnel
+
+> Así se arrancó (API en una laptop con Docker). Desde el 6-oct-2026 la API corre en el servidor y la laptop quedó
+> fuera; esta sección queda de referencia y para el paso del Funnel de Tailscale.
 
 Sin dominio propio se puede desplegar igual: la PC (tiene Tailscale) publica la API con una URL HTTPS **estable**
 (no cambia al reiniciar), y el front va en Vercel con su dirección gratuita `*.vercel.app`.
@@ -50,12 +53,12 @@ Sin dominio propio se puede desplegar igual: la PC (tiene Tailscale) publica la 
 4. **Cerrar el círculo.** Con la URL `*.vercel.app` que entregue Vercel, editar `.env` de la API
    (`Cors__Origins__0` y `Recuperacion__FrontendResetUrl`) y aplicar con `docker compose up -d`.
 
-**Estado actual (5-oct-2026):**
+**Estado actual (6-oct-2026):**
 
 | Pieza | Dónde |
 |---|---|
 | Front (producción, pública) | `https://internal-search-frontend.vercel.app` — proyecto `informa-peru/internal-search-frontend` |
-| API (pública, vía Funnel) | `https://desktop-rqr1dib.tail4a0d10.ts.net:8443` → contenedor en `127.0.0.1:8090` de esta PC |
+| API (pública, vía Funnel) | `https://win-hkbui0id607.tail4a0d10.ts.net:8443` → servicio de Windows `BuscadorApi` en el servidor de la oficina (`127.0.0.1:8090`, instalado en `C:\Buscador`) |
 | Base de datos | La real de la oficina (`192.168.1.17`), solo accesible desde la red interna |
 
 - **Actualizar el front:** el proyecto de Vercel **no está conectado a GitHub** (la conexión nativa exige ser
@@ -68,7 +71,7 @@ Sin dominio propio se puede desplegar igual: la PC (tiene Tailscale) publica la 
      (los ids del equipo y del proyecto; están en `.vercel/project.json` de la copia local del front).
      Mientras falten, el flujo avisa y se omite sin dar error.
   2. *Manual:* `git pull` y, desde la carpeta del front, `npx vercel deploy --prod`.
-- **Actualizar la API:** `git pull` y `docker compose up -d --build` en esta PC.
+- **Actualizar la API:** automático: cada push a `main` se publica solo (ver «Actualización automática desde GitHub»).
 - Solo la URL de producción es pública; la URL única que Vercel da a cada despliegue pide iniciar sesión en Vercel.
 - La contraseña de `admin.general` está en `.credenciales-admin.txt` (solo en esta PC, ignorado por git).
 
@@ -81,7 +84,8 @@ desarrolla en local y de verdad necesita RENIEC, el token se le entrega por un c
 (`Reniec__Token`), nunca en el repositorio. Desde esta versión, una copia sin token responde
 "La consulta RENIEC no está configurada" y la auditoría guarda el motivo.
 
-**Archivos del historial de descargas.** Los Excel que genera la carga masiva se guardan en `/data/historial`, dentro del
+**Archivos del historial de descargas.** En el servidor de Windows, los Excel de la carga masiva quedan en
+`C:\Buscador\historial` (carpeta con permiso solo para el servicio). En Docker se guardaban en `/data/historial`, dentro del
 volumen de Docker `historial`: sobreviven a `docker compose up -d --build`, pero `docker compose down -v` los borra.
 La API corre sin privilegios y por eso no escribe en `/app` (esa carpeta fue la causa de un error 500 en
 `/api/historial/...` el 5-oct). Los registros de historial creados antes desde un equipo de desarrollo apuntan a rutas
@@ -89,9 +93,9 @@ de Windows que el contenedor no tiene; al descargarlos responde "el archivo ya n
 El contenedor trabaja en hora de Lima (`TZ=America/Lima`).
 
 Limitaciones de esta etapa:
-- La PC debe estar **encendida, en la red de la oficina**, con Docker y Tailscale funcionando. Tras un reinicio, la
-  API solo vuelve cuando alguien **inicia sesión** (Docker Desktop arranca con la sesión): el 5-oct esto dejó el sistema
-  caído un buen rato. Se resuelve pasando la API a un servidor (sección siguiente).
+- La API depende ahora del servidor de la oficina: debe estar **encendido, con internet y con Tailscale**. La API y
+  Tailscale arrancan solos con el equipo, sin que nadie inicie sesión. Con un solo servidor, si se apaga el sistema se
+  cae; un monitor externo sobre `/health` avisa.
 - En modo producción los correos (invitaciones y recuperación de contraseña) **solo salen si se configura `Email__*`**;
   sin SMTP no hay forma de entregar los enlaces. Mientras tanto, las cuentas se crean con contraseña inicial.
 - Funnel no garantiza ancho de banda; sirve para esta etapa, no para producción definitiva.
@@ -104,6 +108,10 @@ vive y alcanza la base de datos; `503` = la API vive pero no alcanza la base. En
 `(healthy)` / `(unhealthy)`.
 
 ## Que la API no dependa de una laptop: servicio de Windows en el servidor de la oficina
+
+**Hecho el 6-oct-2026.** La API corre como servicio `BuscadorApi` en el servidor `win-hkbui0id607` (`C:\Buscador`),
+publicada en `https://win-hkbui0id607.tail4a0d10.ts.net:8443`. La laptop quedó fuera (contenedor detenido y su Funnel
+:8443 apagado). Lo que sigue explica cómo se hizo y cómo operarlo.
 
 **El problema.** Hoy la API corre en una laptop con Docker Desktop. Si Windows se reinicia (actualizaciones), se
 agota la batería, se cierra la tapa o se pierde el internet, el sistema se cae para todos. Y Docker Desktop arranca
@@ -163,13 +171,47 @@ se vuelven a generar con una carga nueva.
 
 - **Estado:** `Get-Service BuscadorApi` y `Invoke-WebRequest http://127.0.0.1:8090/health` (200 = todo bien).
 - **Registros:** Visor de eventos → Registros de Windows → *Aplicación* (origen `internal-search-backend.Api`).
-- **Actualizar la API:** repetir los pasos 1-3 **sin** el `.env`: se conserva la configuración instalada. Para
+- **Actualizar la API:** es automático (ver la sección siguiente). A mano: repetir los pasos 1-3 **sin** el `.env`: se conserva la configuración instalada. Para
   cambiar algún valor (clave, CORS, SMTP…), poner el `.env` actualizado junto al script y volver a ejecutarlo.
 - **Quitar el servicio:** `.\instalar-servicio.ps1 -Desinstalar` (los archivos y el historial de `C:\Buscador` se
   conservan).
 - **Monitoreo:** que un monitor externo gratuito (UptimeRobot, Better Stack, etc.) consulte
   `https://<la-api>/health` cada minuto y avise por correo si no responde `200`. Así el equipo se entera antes que los
   usuarios. Es lo único que falta configurar a mano y requiere una cuenta del equipo en ese servicio.
+
+### Actualización automática desde GitHub
+
+Cada push a `main` se publica solo en unos minutos, sin tocar el servidor. Una tarea programada
+(`BuscadorApi-Actualizador`, cada 2 minutos, como SYSTEM) ejecuta `C:\Buscador\actualizador\actualizar.ps1`:
+
+1. Pregunta a GitHub por el último commit de `main` (casi siempre no hay novedades y la consulta es gratuita).
+2. Si hay uno nuevo, descarga las fuentes, las compila con un SDK de .NET propio (`C:\Buscador\dotnet`, se baja la
+   primera vez) y compara el resultado con lo instalado. Si es idéntico (p. ej. cambió solo la documentación) no
+   reinicia nada.
+3. Si cambió: guarda una copia de la API actual (`C:\Buscador\api.anterior`), detiene el servicio, copia la versión
+   nueva (la configuración instalada no se toca), lo inicia y espera a que `/health` responda. **Si no arranca,
+   restaura la copia y no reintenta ese commit**; el siguiente commit se prueba solo.
+
+La API se reinicia unos 10–15 segundos cuando hay cambios reales. Si el servidor se apaga a mitad de una
+actualización, la siguiente ejecución deja todo en orden.
+
+**Activarla (una sola vez)**, en un Símbolo del sistema como administrador **en el servidor**:
+```bat
+powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://raw.githubusercontent.com/irubio06dev-svg/internal-search-backend/main/deploy/windows/actualizar.ps1 -OutFile $env:TEMP\actualizar.ps1 -UseBasicParsing; & $env:TEMP\actualizar.ps1 -Instalar"
+```
+La primera vez instala el SDK y compila (varios minutos) y hace la primera actualización; al final dice
+«Actualización automática ACTIVA».
+
+- **Ver el estado:** `type C:\Buscador\actualizador\estado.txt` (último resultado) y `actualizador.log` (detalle).
+- **Desactivarla:** `powershell -ExecutionPolicy Bypass -File C:\Buscador\actualizador\actualizar.ps1 -Desinstalar`.
+- **El propio `actualizar.ps1` también se actualiza** desde el repositorio (si el nuevo no tiene errores de sintaxis).
+- **Todo lo que llegue a `main` se despliega solo, sin revisión.** Quien pueda escribir en `main` manda sobre el
+  servidor: mantener los repositorios privados y con pocas personas con permiso de escritura.
+- **Los cambios de base de datos se ejecutan a mano, antes de subir el código que los usa**: la actualización no
+  corre scripts SQL.
+- Si el repositorio pasa a ser privado, guardar un token de GitHub de solo lectura en
+  `C:\Buscador\actualizador\github-token.txt`.
+- Hace falta cerca de 2 GB libres en `C:` (SDK, caché de paquetes y copia anterior).
 
 ### Qué cubre y qué no
 
