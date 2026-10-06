@@ -329,9 +329,11 @@ if (app.Configuration.GetValue<bool>("Proxy:ConfiarEnCabeceras"))
 
 app.UseForwardedHeaders(cabecerasReenviadas);
 
-app.UseHttpsRedirection();
 
+// CAMBIO AQUÍ: Poner CORS antes de UseHttpsRedirection
 app.UseCors("Frontend");
+
+//app.UseHttpsRedirection();
 
 app.UseRateLimiter();
 
