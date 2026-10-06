@@ -6,9 +6,13 @@
 Navegador ──HTTPS──▶ Vercel (front Angular, sitio estático)
     │
     └──HTTPS──▶ https://api.tudominio.com ──(túnel de Cloudflare)──▶ máquina de la oficina
-                                                                       │  Docker: API .NET (puerto 8080, solo localhost)
+                                                                       │  API .NET (servicio de Windows o Docker; solo localhost)
                                                                        └──▶ SQL Server 192.168.1.17:1433 (red interna)
 ```
+
+La API corre en una máquina **siempre encendida** de la oficina. Hoy es una laptop con Docker (provisional); lo
+definitivo es un servicio de Windows en un servidor: ver
+[Que la API no dependa de una laptop](#que-la-api-no-dependa-de-una-laptop-servicio-de-windows-en-el-servidor-de-la-oficina).
 
 **Por qué así:** Vercel solo sirve el front. No ejecuta .NET y, además, `192.168.1.17` es una IP privada que no
 existe desde internet. La API tiene que correr **dentro de la red de la oficina**, donde sí ve la base de datos, y
@@ -85,13 +89,114 @@ de Windows que el contenedor no tiene; al descargarlos responde "el archivo ya n
 El contenedor trabaja en hora de Lima (`TZ=America/Lima`).
 
 Limitaciones de esta etapa:
-- La PC debe estar **encendida, en la red de la oficina**, con Docker y Tailscale funcionando.
+- La PC debe estar **encendida, en la red de la oficina**, con Docker y Tailscale funcionando. Tras un reinicio, la
+  API solo vuelve cuando alguien **inicia sesión** (Docker Desktop arranca con la sesión): el 5-oct esto dejó el sistema
+  caído un buen rato. Se resuelve pasando la API a un servidor (sección siguiente).
 - En modo producción los correos (invitaciones y recuperación de contraseña) **solo salen si se configura `Email__*`**;
   sin SMTP no hay forma de entregar los enlaces. Mientras tanto, las cuentas se crean con contraseña inicial.
 - Funnel no garantiza ancho de banda; sirve para esta etapa, no para producción definitiva.
 - Antes de publicar, cambiar la contraseña de `admin.general`: la temporal circuló por chat.
 
-Cuando llegue el dominio se pasa al túnel con nombre (sección 2) y se actualiza `API_URL` en Vercel.
+Cuando llegue el dominio, ver [Cuando llegue el dominio](#cuando-llegue-el-dominio).
+
+**Estado de la API:** `GET /health` (público; solo responde `Healthy` o `Unhealthy`, sin detalles). `200` = la API
+vive y alcanza la base de datos; `503` = la API vive pero no alcanza la base. En Docker, `docker ps` lo muestra como
+`(healthy)` / `(unhealthy)`.
+
+## Que la API no dependa de una laptop: servicio de Windows en el servidor de la oficina
+
+**El problema.** Hoy la API corre en una laptop con Docker Desktop. Si Windows se reinicia (actualizaciones), se
+agota la batería, se cierra la tapa o se pierde el internet, el sistema se cae para todos. Y Docker Desktop arranca
+recién cuando alguien **inicia sesión**: tras un reinicio sin nadie delante, la API no vuelve sola.
+
+**La solución.** Correr la API como **servicio de Windows** en un servidor que siempre esté encendido. El servicio
+arranca con el equipo **sin que nadie inicie sesión**, se reinicia solo si falla y no necesita Docker. El front sigue
+en Vercel y la base de datos no se mueve: solo cambia dónde corre la API.
+
+**Qué servidor sirve.** Uno **siempre encendido**, con **internet**, en la **misma red que la base de datos**
+(`192.168.1.17:1433`) y con **Tailscale** (mientras no haya dominio). No hace falta instalar .NET: el paquete lo
+trae. El instalador avisa si la zona horaria del servidor no es la de Lima (las fechas que escribe la API usan la hora
+del equipo).
+
+### Primera instalación
+
+1. **En la PC de desarrollo**, armar el paquete (≈ 57 MB):
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File deploy\windows\publicar-servidor.ps1
+   ```
+   Deja `artifacts\buscador-servidor.zip`. Con `-IncluirEnv` el paquete lleva el `.env` real: trátalo como una
+   contraseña (no lo subas a ningún sitio ni lo mandes por correo).
+2. **Copiar el `.zip` al servidor** (Escritorio remoto o carpeta compartida) y descomprimirlo. Dejar el `.env`
+   (el mismo que usa Docker; plantilla en `.env.example`) junto a `instalar-servicio.ps1`.
+3. **En el servidor**, PowerShell **como administrador** dentro de esa carpeta:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\instalar-servicio.ps1
+   ```
+   Copia la API a `C:\Buscador`, genera la configuración desde el `.env`, registra el servicio `BuscadorApi`
+   (inicio automático, cuenta sin privilegios, reinicio automático si se cae), restringe los permisos de la carpeta
+   (hay secretos) y comprueba `GET /health`. Si algo falla lo dice claro (p. ej. si el servidor no alcanza la base).
+   Antes de tocar nada valida el `.env`: rechaza claves faltantes o con los valores de ejemplo.
+4. **Publicarla por HTTPS** (una sola vez). Con Tailscale; antes de elegir el puerto, mirar `tailscale funnel status`
+   para no pisar un servicio existente:
+   ```powershell
+   tailscale set --unattended          # que Tailscale siga activo aunque nadie tenga la sesión abierta
+   tailscale funnel --bg --https=8443 http://127.0.0.1:8090
+   ```
+   La dirección pública es `https://<nombre-del-servidor>.<tu-tailnet>.ts.net:8443` (el instalador la imprime).
+5. **Apuntar el front al servidor nuevo** (desde la carpeta del front):
+   ```bash
+   npx vercel env rm API_URL production
+   npx vercel env add API_URL production      # la dirección del paso 4
+   npx vercel deploy --prod
+   ```
+6. **Probar** `https://internal-search-frontend.vercel.app` (login y una consulta) y, recién entonces, **retirar la
+   laptop**: `docker compose down` y `tailscale funnel --https=8443 off`.
+
+Para no cortar a nadie, el orden es: instalar y probar el servidor → cambiar `API_URL` → apagar la laptop. Mientras
+conviven, ambas usan la misma base y el mismo `Jwt__Key` (el `.env` es el mismo), así que las sesiones abiertas
+siguen valiendo. Lo único que no se muda es el historial de descargas (los Excel de la carga masiva, últimos 5 por
+usuario): quedó en el volumen de Docker de la laptop y esos registros responderán "el archivo ya no está disponible";
+se vuelven a generar con una carga nueva.
+
+### Día a día
+
+- **Estado:** `Get-Service BuscadorApi` y `Invoke-WebRequest http://127.0.0.1:8090/health` (200 = todo bien).
+- **Registros:** Visor de eventos → Registros de Windows → *Aplicación* (origen `internal-search-backend.Api`).
+- **Actualizar la API:** repetir los pasos 1-3 **sin** el `.env`: se conserva la configuración instalada. Para
+  cambiar algún valor (clave, CORS, SMTP…), poner el `.env` actualizado junto al script y volver a ejecutarlo.
+- **Quitar el servicio:** `.\instalar-servicio.ps1 -Desinstalar` (los archivos y el historial de `C:\Buscador` se
+  conservan).
+- **Monitoreo:** que un monitor externo gratuito (UptimeRobot, Better Stack, etc.) consulte
+  `https://<la-api>/health` cada minuto y avise por correo si no responde `200`. Así el equipo se entera antes que los
+  usuarios. Es lo único que falta configurar a mano y requiere una cuenta del equipo en ese servicio.
+
+### Qué cubre y qué no
+
+Cubre: reinicios del servidor, que nadie tenga la sesión iniciada y caídas del proceso de la API.
+No cubre: un corte de energía o de internet en la oficina (un UPS y un segundo enlace lo mitigan) ni la caída del
+propio SQL Server. Para independizarse por completo de la oficina, la API y la base tendrían que ir a un proveedor en la
+nube.
+
+### Cuando llegue el dominio
+
+Solo cambian las direcciones; la API y el servidor siguen igual.
+
+1. **Cloudflare** (gratis): agregar el dominio y crear el túnel (*Zero Trust → Networks → Tunnels → Create a tunnel*,
+   tipo *Cloudflared*).
+2. **En el servidor** (PowerShell como administrador), con el token que muestra Cloudflare. Queda también como servicio
+   de Windows, igual que la API:
+   ```powershell
+   cloudflared.exe service install <TOKEN>
+   ```
+   y en *Public Hostname*: `api.<dominio>` → `http://localhost:8090`.
+3. **Vercel:** `API_URL = https://api.<dominio>` y volver a desplegar. Si se quiere, darle al front un dominio propio
+   (`buscador.<dominio>`).
+4. **API (`.env` del servidor):** agregar `Cors__Origins__1` con el front nuevo (conservar el anterior hasta terminar de
+   migrar), actualizar `Recuperacion__FrontendResetUrl` y volver a ejecutar `instalar-servicio.ps1`.
+5. **Apagar Funnel:** `tailscale funnel --https=8443 off`.
+6. **Correo:** configurar `Email__*` con un remitente del dominio (`no-reply@<dominio>`, con SPF/DKIM) para las
+   invitaciones y la recuperación de contraseña.
+7. **Monitor externo** sobre `https://api.<dominio>/health`.
 
 ## 0. Antes de empezar (una sola vez)
 
@@ -199,5 +304,6 @@ Las URLs de *preview* de Vercel no están permitidas salvo que se agreguen.
   corresponde al plan *Pro* (o publicar el front en otro hosting estático).
 - **Secretos.** `.env` no se versiona (está en `.gitignore`). Nunca poner claves en `appsettings.json` ni en el repositorio.
 - **Actualizar la API.** `git pull && docker compose up -d --build` en la máquina de la oficina.
-- **Si la máquina de la oficina se apaga**, el sistema deja de funcionar (el front sigue en Vercel pero sin API).
-  Para algo más robusto, la API puede ir a un servidor siempre encendido con acceso a la base por VPN.
+- **Si la máquina de la oficina se apaga**, el sistema deja de funcionar (el front sigue en Vercel pero sin API). Por
+  eso la API debe correr como servicio en un servidor siempre encendido (ver la sección dedicada) y conviene un monitor
+  externo sobre `/health`.
