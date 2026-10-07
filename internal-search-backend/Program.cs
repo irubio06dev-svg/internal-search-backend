@@ -41,21 +41,9 @@ using System.Threading.RateLimiting;
 using internal_search.Domain.Configuration;
 using internal_search.Domain.Interfaces.Notificaciones;
 using internal_search_backend.Infraestructure.Notificaciones;
-using internal_search_backend.Health;
-using Microsoft.Extensions.Hosting.WindowsServices;
 
 
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-{
-    Args = args,
-    // Como servicio de Windows la carpeta actual es C:\Windows\System32: se usa la de la aplicación para que
-    // encuentre appsettings.json. Fuera de un servicio (consola, Docker, desarrollo) queda el valor por defecto.
-    ContentRootPath = WindowsServiceHelpers.IsWindowsService() ? AppContext.BaseDirectory : default
-});
-
-// Servidor de la oficina: la API corre como servicio de Windows, arranca con el equipo sin necesidad de iniciar
-// sesión y se reinicia sola si falla. Fuera de un servicio (consola, Docker, desarrollo) esta línea no hace nada.
-builder.Host.UseWindowsService(options => options.ServiceName = "BuscadorApi");
+var builder = WebApplication.CreateBuilder(args);
 
 // Los secretos ya no viven en appsettings.json: user-secrets en desarrollo, variables de entorno en producción
 if (string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("DefaultConnection")))
@@ -258,10 +246,6 @@ builder.Services.AddControllers(options =>
     .AddControllersAsServices();
 builder.Services.AddProblemDetails();
 
-// Estado para monitoreo: GET /health responde 200 si la API alcanza la base de datos y 503 si no
-builder.Services.AddSingleton<BaseDatosHealthCheck>();
-builder.Services.AddHealthChecks().AddCheck<BaseDatosHealthCheck>("base_datos");
-
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -309,12 +293,12 @@ builder.Services.AddCors(options =>
 
 
 var app = builder.Build();
-
+app.UseSwagger();
+app.UseSwaggerUI();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+
 }
 else
 {
@@ -360,8 +344,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-// Anónimo a propósito (lo consultan Docker y el monitor externo); solo dice Healthy/Unhealthy, sin detalles
-app.MapHealthChecks("/health");
 
 app.Run();
